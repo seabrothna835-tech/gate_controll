@@ -1,0 +1,37 @@
+@import "tailwindcss";
+
+@import url('https://fonts.googleapis.com/css2?family=Hanuman:wght@100;300;400;700;900&display=swap');
+
+body {
+    font-family: 'Hanuman', serif;
+}
+
+@import url('https://fonts.googleapis.com/css2?family=Moul&display=swap');
+
+.font-moul {
+    font-family: 'Moul', serif;
+}
+
+
+.color-animate {
+    animation: colorChange 1s infinite alternate;
+}
+
+@keyframes colorChange {
+    0% {
+        color: #31cae8;
+    }
+    100% {
+        color: #00D4FF;
+    }
+}
+
+/* Set color to global variables for the theme */
+@theme {
+    /* light mode  */
+    --color-lightModeBg: #F3F6F8;
+    --color-lightModeContent: #73818d;
+    --color-lightModeTitle: #263746;
+    --color-lightModeSubTitle:#73818d;
+    --color-ligthBoder:
+}
