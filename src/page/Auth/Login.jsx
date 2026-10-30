@@ -28,7 +28,7 @@ function Login() {
                 // Already signed in: go straight to the dashboard
                 if (authenticated) {
                     sessionStorage.removeItem(REDIRECT_FLAG)
-                    navigate('/dashboard', { replace: true })
+                    navigate('/main', { replace: true })
                     return
                 }
 
@@ -58,7 +58,7 @@ function Login() {
         <div className="min-h-screen bg-[#e9e9e9] text-[#3d2d31] font-hanuman">
             <div className="w-96 p-6"><img src={logo} alt="ppap" /></div>
             <div className="flex w-full items-center justify-center p-6">
-                <div className="w-full max-w-[380px] rounded-[28px] bg-[#f5f4f4] p-8 text-center shadow-[0_18px_30px_rgba(0,0,0,0.08)]">
+                <div className="w-full max-w-full rounded-[28px] bg-[#f5f4f4] p-8 text-center shadow-[0_18px_30px_rgba(0,0,0,0.08)]">
                     {error ? (
                         <>
                             <p className="mb-6 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-600">
@@ -84,4 +84,4 @@ function Login() {
     )
 }
 
-export default Login
+export default Login;
