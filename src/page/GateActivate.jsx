@@ -13,6 +13,7 @@ const cameras = [
         name: "Gate 1",
         url: "http://localhost:8889/gate1/",
     },
+    
     {
         id: 2,
         name: "Gate 2",
@@ -139,7 +140,6 @@ function CameraPlayer({ camera, registerVideo }) {
                     <h3>កាមេរ៉ា​​ {camera.id}</h3>
                 </div>
                 <div className="text-xs p-1 uppercase border border-green-300 rounded-2xl flex items-center gap-2">
-                    {/* <span className="color-animate text-2xl"><PiDotOutlineLight /></span> */}
                     <span className="relative flex h-1.5 w-1.5">
                         <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#42a875] opacity-40" />
                         <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-[#26915b]" />
@@ -270,12 +270,12 @@ export default function GateActivate() {
 
     return (
         <main data-mode={activeMode ? "light" : "dark"} className="mx-auto max-w-[1600px] p-4 sm:p-6 lg:p-8 lg:pt-2 font-hanuman">
-            <div className="mb-4 flex items-center justify-between text-[#263746]">
+            <div className="mb-4 flex items-center justify-between text-black">
                 <div className="flex items-center gap-2">
                     <MdVideocam className="text-3xl color-animate shrink-0" />
                     <div>
                         <p className="text-lg">ពិនិត្យតាមរយៈកាមេរ៉ា</p>
-                        <p className="text-xs text-[#73818d]">
+                        <p className="text-xs text-gray-500">
                             ចុចលើរូបភាពដើម្បីបើកពេញអេក្រង់
                         </p>
                     </div>

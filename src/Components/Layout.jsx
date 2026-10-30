@@ -12,7 +12,7 @@ function Layout() {
     }, [activeMode]);
 
     return (
-        <div className="min-h-screen bg-[#f3f6f8]">
+        <div className="min-h-screen bg-white">
             <Header activeMode={activeMode} setActiveMode={setActiveMode} />
             <Outlet context={{ activeMode }} />
         </div>
