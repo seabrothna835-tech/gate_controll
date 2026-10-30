@@ -6,6 +6,7 @@ import { BsRecordBtn } from "react-icons/bs";
 import { MdVideocam } from "react-icons/md";
 import { TfiLayoutColumn2Alt, TfiLayoutColumn3Alt, TfiLayoutColumn4Alt } from "react-icons/tfi";
 import { TbColumns1Filled } from "react-icons/tb";
+import { initKeycloak, keycloak } from "../keyCloak";
 
 const cameras = [
     {
@@ -27,7 +28,7 @@ const cameras = [
 ];
 
 const gatecall = {
-    gatecallid: 1016,
+    gatecallid: 1018,
     licence_plate: "PP-3A-5653",
     truck_company: "Mekong Logistics Co., Ltd.",
     descriptions: "Truck entered through Gate 2 for container pickup",
@@ -36,12 +37,13 @@ const gatecall = {
     driver_id: "DRV-004",
     dropoff_or_pickup: "dropoff",
     terminal: "LM17",
+    gatein_time: "2026-10-28T10:46:56"
 };
 
 const gatecallCargo = {
-    cargo_id: 111,
-    bl_id: 304,
-    container_id: "TGHU7654383",
+    cargo_id: 113,
+    bl_id: 305,
+    container_id: "TGHU7654385",
     handling_time: "2026-10-23T09:45:00",
     blnumber: "BL-2026-004",
     container_lenght: "20FT",
@@ -62,9 +64,11 @@ const gatecallCargo = {
     invrcv_name: "Mekong Import Solutions",
     cargo_status: "ACT",
     terminal: "LM17",
+    create_by:1,
+    create_time: "2026-10-28T10:46:56"
 };
 
-const gateInApiUrl = "http://localhost:8080/api/gate-in";
+const gateInApiUrl = "http://localhost:8080/api/gate";
 
 const templateVideo = [
     {
@@ -184,10 +188,21 @@ export default function GateActivate() {
     }, []);
 
     const captureAll = async () => {
+        capturedImages.forEach((e, index) => { console.log(`Captured image ${index + 1}:`, e); console.log("Image URL:", e.images?.url); });
         setIsSubmitting(true);
         setSubmissionMessage("");
 
         try {
+            // await initKeycloak();
+            // if (!keycloak.authenticated) {
+            //     throw new Error("Your session has expired. Please sign in again.");
+            // }
+
+            // await keycloak.updateToken(30);
+            // if (!keycloak.token) {
+            //     throw new Error("Unable to retrieve an access token. Please sign in again.");
+            // }
+
             const capturedAt = new Date().toLocaleString();
             const images = cameras.map((camera) => {
                 const video = videoRefs.current[camera.id];
@@ -240,15 +255,15 @@ export default function GateActivate() {
                 })),
                 gatecallCargo,
             };
-            console.log("Payload : ",payload)
 
             const response = await fetch(gateInApiUrl, {
                 method: "POST",
                 headers: {
-                    "Content-Type": "application/json",
+                    "Content-Type": "application/json"
                 },
                 body: JSON.stringify(payload),
             });
+            //  Authorization: `Bearer ${keycloak.token}`,
 
             if (!response.ok) {
                 const errorText = await response.text();
