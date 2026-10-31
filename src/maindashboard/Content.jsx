@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from "react";
-import { Search } from 'lucide-react';
+// import { Search } from 'lucide-react';
 import Sidebar from "../sidebar/Sidebar";
 import Hls from "hls.js";
 
