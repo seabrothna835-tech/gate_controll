@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Outlet } from "react-router-dom";
 import Header from "./Header";
+import Sidebar from "./Sidebar";
 
 function Layout() {
     const [activeMode, setActiveMode] = useState(
@@ -12,9 +13,14 @@ function Layout() {
     }, [activeMode]);
 
     return (
-        <div className="min-h-screen bg-[#f3f6f8]">
+        <div className="flex min-h-screen flex-col bg-white">
             <Header activeMode={activeMode} setActiveMode={setActiveMode} />
-            <Outlet context={{ activeMode }} />
+            <div className="flex flex-1 items-stretch">
+                <Sidebar />
+                <div className="min-w-0 flex-1">
+                    <Outlet context={{ activeMode }} />
+                </div>
+            </div>
         </div>
     );
 }
