@@ -1,0 +1,43 @@
+{
+    "gateData": {
+        "gatecall": {
+                "gatecallid": 7118,
+                "licence_plate": "PP-3A-5653",
+                "truck_company": "Mekong Logistics Co., Ltd.",
+                "descriptions": "Truck entered through Gate 2 for container pickup",
+                "gatecall_status": "ACT",
+                "driver_name": "Sok Vannak",
+                "driver_id": "DRV-004",
+                "dropoff_or_pickup": "dropoff",
+                "terminal": "LM17",
+                "gatein_time": "2026-10-28T10:46:56"
+            },
+            "gatecallCargo": {
+                "cargo_id": 523,
+                "bl_id": 305,
+                "container_id": "TGHU7653315",
+                "handling_time": "2026-10-23T09:45:00",
+                "blnumber": "BL-2026-004",
+                "container_lenght": "20FT",
+                "fullorempty": "EMPTY",
+                "cont_grossweight": 12500,
+                "cont_tareweight": 2200,
+                "vgm": "14700",
+                "refer_flag": "Y",
+                "line_id": 11,
+                "shppingline_name": "CMA CGM",
+                "lineagent_id": 21,
+                "lineagent_name": "Mekong Shipping Agency",
+                "vsl_operator_id": 31,
+                "vsl_operator_name": "Pacific Vessel Operations",
+                "cfa_id": 41,
+                "cfa_name": "Cambodia Freight Agency",
+                "invrcv_id": 52,
+                "invrcv_name": "Mekong Import Solutions",
+                "cargo_status": "ACT",
+                "terminal": "LM17",
+                "create_by": 1,
+                "create_time": "2026-10-28T10:46:56"
+            }
+    }
+}
