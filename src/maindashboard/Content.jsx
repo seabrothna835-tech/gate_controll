@@ -1,6 +1,5 @@
-import React, { useState, useEffect, useMemo } from "react";
-import { Search, Loader2 } from 'lucide-react';
-import axios from 'axios';
+import React, { useState, useMemo } from "react";
+import { Search } from 'lucide-react';
 import Sidebar from "../sidebar/Sidebar";
 
 export default function Content() {
