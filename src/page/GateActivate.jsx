@@ -3,10 +3,9 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useOutletContext } from "react-router-dom";
 import Hls from "hls.js";
 import { BsRecordBtn } from "react-icons/bs";
-import { MdVideocam } from "react-icons/md";
+import { MdFullscreen, MdVideocam } from "react-icons/md";
 import { TfiLayoutColumn2Alt, TfiLayoutColumn3Alt, TfiLayoutColumn4Alt } from "react-icons/tfi";
 import { TbColumns1Filled } from "react-icons/tb";
-import { initKeycloak, keycloak } from "../keyCloak";
 
 const cameras = [
     {
@@ -14,7 +13,7 @@ const cameras = [
         name: "Gate 1",
         url: "http://localhost:8889/gate1/",
     },
-    
+
     {
         id: 2,
         name: "Gate 2",
@@ -26,49 +25,6 @@ const cameras = [
         url: "http://localhost:8889/gate3/",
     }
 ];
-
-const gatecall = {
-    gatecallid: 1018,
-    licence_plate: "PP-3A-5653",
-    truck_company: "Mekong Logistics Co., Ltd.",
-    descriptions: "Truck entered through Gate 2 for container pickup",
-    gatecall_status: "ACT",
-    driver_name: "Sok Vannak",
-    driver_id: "DRV-004",
-    dropoff_or_pickup: "dropoff",
-    terminal: "LM17",
-    gatein_time: "2026-10-28T10:46:56"
-};
-
-const gatecallCargo = {
-    cargo_id: 113,
-    bl_id: 305,
-    container_id: "TGHU7654385",
-    handling_time: "2026-10-23T09:45:00",
-    blnumber: "BL-2026-004",
-    container_lenght: "20FT",
-    fullorempty: "EMPTY",
-    cont_grossweight: 12500.0,
-    cont_tareweight: 2200.0,
-    vgm: "14700",
-    refer_flag: "Y",
-    line_id: 11,
-    shppingline_name: "CMA CGM",
-    lineagent_id: 21,
-    lineagent_name: "Mekong Shipping Agency",
-    vsl_operator_id: 31,
-    vsl_operator_name: "Pacific Vessel Operations",
-    cfa_id: 41,
-    cfa_name: "Cambodia Freight Agency",
-    invrcv_id: 52,
-    invrcv_name: "Mekong Import Solutions",
-    cargo_status: "ACT",
-    terminal: "LM17",
-    create_by:1,
-    create_time: "2026-10-28T10:46:56"
-};
-
-const gateInApiUrl = "http://localhost:8080/api/gate";
 
 const templateVideo = [
     {
@@ -94,7 +50,30 @@ const templateVideo = [
 ];
 
 function CameraPlayer({ camera, registerVideo }) {
+    const cardRef = useRef(null);
     const videoRef = useRef(null);
+
+    const openFullscreen = async () => {
+        const card = cardRef.current;
+        const video = videoRef.current;
+        if (!card || !video) return;
+
+        try {
+            if (document.fullscreenElement) {
+                await document.exitFullscreen();
+                return;
+            }
+            if (card.requestFullscreen) {
+                await card.requestFullscreen();
+            } else if (video.webkitEnterFullscreen) {
+                video.webkitEnterFullscreen();
+            } else {
+                throw new Error("Fullscreen is not supported by this browser.");
+            }
+        } catch (error) {
+            console.error(`${camera.name}: unable to open fullscreen.`, error);
+        }
+    };
 
     useEffect(() => {
         const video = videoRef.current;
@@ -137,7 +116,7 @@ function CameraPlayer({ camera, registerVideo }) {
     }, [camera, registerVideo]);
 
     return (
-        <div className="overflow-hidden rounded-2xl border-2 color-animate shadow-md font-hanuman ">
+        <div ref={cardRef} className="camera-card overflow-hidden rounded-2xl border color-animate shadow-md font-hanuman ">
             <div className="bg-gray-800 p-3 text-white flex items-center justify-between">
                 <div className="flex item-center gap-2">
                     <span className="text-2xl color-animate"><BsRecordBtn /></span>
@@ -152,26 +131,42 @@ function CameraPlayer({ camera, registerVideo }) {
                 </div>
             </div>
 
-            <video
-                ref={videoRef}
-                autoPlay
-                muted
-                playsInline
-                controls
-                crossOrigin="anonymous"
-                className="aspect-video w-full bg-black"
-            />
+            <div className="camera-player-frame relative">
+                <video
+                    ref={videoRef}
+                    autoPlay
+                    muted
+                    playsInline
+                    crossOrigin="anonymous"
+                    className="camera-player-video aspect-video w-full bg-black"
+                />
+                <button
+                    type="button"
+                    onClick={openFullscreen}
+                    aria-label={`${document.fullscreenElement ? "បិទពេញអេក្រង់" : "បើកពេញអេក្រង់"}`}
+                    title={`${document.fullscreenElement ? "បិទពេញអេក្រង់" : "បើកពេញអេក្រង់"}`}
+                    className="absolute bottom-3 right-3 rounded-md bg-black/60 p-2 text-white transition-colors hover:bg-black/80 focus-visible:outline focus-visible:outline-2 focus-visible:outline-white"
+                >
+                    <MdFullscreen className="text-2xl" />
+                </button>
+            </div>
         </div>
     );
 }
 
 export default function GateActivate() {
-    const { activeMode } = useOutletContext();
+    const api = import.meta.env.VITE_API_URL || "http://localhost:8080";
+    // const { activeMode } = useOutletContext();
     const videoRefs = useRef({});
     const [capturedImages, setCapturedImages] = useState([]);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [submissionMessage, setSubmissionMessage] = useState("");
     const [showVdo, setShowVdo] = useState(3);
+    const [gateData, setGateData] = useState({
+        gatecall: {},
+        gatecallCargo: {}
+    });
+    const [submit, setSubmit] = useState(false);
     const gridColumns = {
         1: "grid-cols-1",
         2: "grid-cols-1 sm:grid-cols-2",
@@ -186,118 +181,135 @@ export default function GateActivate() {
             delete videoRefs.current[cameraId];
         }
     }, []);
-
     const captureAll = async () => {
-        capturedImages.forEach((e, index) => { console.log(`Captured image ${index + 1}:`, e); console.log("Image URL:", e.images?.url); });
-        setIsSubmitting(true);
-        setSubmissionMessage("");
+        setSubmit(true);
+    }
 
-        try {
-            // await initKeycloak();
-            // if (!keycloak.authenticated) {
-            //     throw new Error("Your session has expired. Please sign in again.");
-            // }
+    useEffect(() => {
+        if (!submit) return;
 
-            // await keycloak.updateToken(30);
-            // if (!keycloak.token) {
-            //     throw new Error("Unable to retrieve an access token. Please sign in again.");
-            // }
+        const submitGateIn = async () => {
+            setIsSubmitting(true);
+            setSubmissionMessage("");
 
-            const capturedAt = new Date().toLocaleString();
-            const images = cameras.map((camera) => {
-                const video = videoRefs.current[camera.id];
+            try {
+                const capturedAt = new Date().toLocaleString();
+                const images = cameras.map((camera) => {
+                    const video = videoRefs.current[camera.id];
 
-                if (!video || video.readyState < 2) {
-                    throw new Error(`${camera.name}: camera is not ready.`);
-                }
-                if (!video.videoWidth || !video.videoHeight) {
-                    throw new Error(`${camera.name}: video dimensions are unavailable.`);
-                }
+                    if (!video || video.readyState < 2) {
+                        throw new Error(`${camera.name}: camera is not ready.`);
+                    }
+                    if (!video.videoWidth || !video.videoHeight) {
+                        throw new Error(`${camera.name}: video dimensions are unavailable.`);
+                    }
 
-                const canvas = document.createElement("canvas");
-                canvas.width = video.videoWidth;
-                canvas.height = video.videoHeight;
+                    const canvas = document.createElement("canvas");
+                    canvas.width = video.videoWidth;
+                    canvas.height = video.videoHeight;
 
-                const context = canvas.getContext("2d");
-                if (!context) {
-                    throw new Error("Unable to create a canvas for image capture.");
-                }
+                    const context = canvas.getContext("2d");
+                    if (!context) {
+                        throw new Error("Unable to create a canvas for image capture.");
+                    }
 
-                context.drawImage(video, 0, 0, canvas.width, canvas.height);
-                const dataUrl = canvas.toDataURL("image/png");
-                const base64Image = dataUrl.split(",")[1];
+                    context.drawImage(video, 0, 0, canvas.width, canvas.height);
+                    const dataUrl = canvas.toDataURL("image/png");
+                    const base64Image = dataUrl.split(",")[1];
 
-                if (!base64Image) {
-                    throw new Error(`${camera.name}: failed to encode the captured image.`);
-                }
+                    if (!base64Image) {
+                        throw new Error(`${camera.name}: failed to encode the captured image.`);
+                    }
 
-                return {
-                    cameraId: camera.id,
-                    dataUrl,
-                    base64Image,
-                    capturedAt,
-                };
-            });
+                    return {
+                        cameraId: camera.id,
+                        dataUrl,
+                        base64Image,
+                        capturedAt,
+                    };
+                });
 
-            setCapturedImages(
-                images.map(({ cameraId, dataUrl, capturedAt }) => ({
-                    id: cameraId,
-                    cameraId,
-                    url: dataUrl,
-                    capturedAt,
-                }))
-            );
-
-            const payload = {
-                gatecall,
-                gateImage: images.map(({ base64Image }) => ({
-                    in_image: base64Image,
-                })),
-                gatecallCargo,
-            };
-
-            const response = await fetch(gateInApiUrl, {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json"
-                },
-                body: JSON.stringify(payload),
-            });
-            //  Authorization: `Bearer ${keycloak.token}`,
-
-            if (!response.ok) {
-                const errorText = await response.text();
-                throw new Error(
-                    `Gate-in request failed (${response.status})${errorText ? `: ${errorText}` : ""}`
+                setCapturedImages(
+                    images.map(({ cameraId, dataUrl, capturedAt }) => ({
+                        id: cameraId,
+                        cameraId,
+                        url: dataUrl,
+                        capturedAt,
+                    }))
                 );
-            }
 
-            setSubmissionMessage("Gate-in payload sent successfully.");
-        } catch (error) {
-            console.error("Capture or gate-in submission failed:", error);
-            setSubmissionMessage(
-                error instanceof Error ? error.message : "Unable to submit gate-in payload."
-            );
-        } finally {
-            setIsSubmitting(false);
+                const payload = {
+                    gatecall: gateData.gatecall,
+                    gatecallCargo: gateData.gatecallCargo,
+                    gateImage: images.map(({ base64Image }) => ({
+                        in_image: base64Image,
+                    })),
+                };
+
+                const response = await fetch(`${api}/api/gate`, {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify(payload),
+                });
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    throw new Error(
+                        `Gate-in request failed (${response.status})${errorText ? `: ${errorText}` : ""}`
+                    );
+                }
+
+                setSubmissionMessage("Gate-in payload sent successfully.");
+            } catch (error) {
+                console.error("Capture or gate-in submission failed:", error);
+
+                setSubmissionMessage(
+                    error instanceof Error
+                        ? error.message
+                        : "Unable to submit gate-in payload."
+                );
+
+            } finally {
+                setIsSubmitting(false);
+                setSubmit(false); // Important: reset submit
+            }
+        };
+
+        submitGateIn();
+
+    }, [submit]);
+    useEffect(() => {
+        async function fetchGateData() {
+            try {
+                const response = await fetch(`http://localhost:3001/gateData`);
+                if (!response.ok) {
+                    throw new Error(`Failed to fetch gate data: ${response.statusText}`);
+                }
+                const data = await response.json();
+                setGateData(data);
+            } catch (error) {
+                console.error("Error fetching gate data:", error);
+            }
         }
-    };
+        fetchGateData();
+    }, []);
 
     return (
-        <main data-mode={activeMode ? "light" : "dark"} className="mx-auto max-w-[1600px] p-4 sm:p-6 lg:p-8 lg:pt-2 font-hanuman">
-            <div className="mb-4 flex items-center justify-between text-black">
+        <main className="dashboard-main mx-auto max-w-[1600px] p-4 sm:p-6 lg:p-8 lg:pt-2 font-hanuman">
+            <div className="mb-5 flex items-center justify-between">
                 <div className="flex items-center gap-2">
                     <MdVideocam className="text-3xl color-animate shrink-0" />
                     <div>
-                        <p className="text-lg">ពិនិត្យតាមរយៈកាមេរ៉ា</p>
-                        <p className="text-xs text-gray-500">
-                            ចុចលើរូបភាពដើម្បីបើកពេញអេក្រង់
+                        <p className="dashboard-title text-lg">ពិនិត្យតាមរយៈកាមេរ៉ា</p>
+                        <p className="dashboard-subtitle text-xs">
+                            Live camera feed · use the fullscreen button to expand
                         </p>
                     </div>
                 </div>
-                <div className="relative grid grid-cols-4 items-center justify-center rounded-full bg-[#edf2f6] p-1">
+                <div className="video-layout-switch relative grid grid-cols-4 items-center justify-center rounded-full p-1">
                     <div
-                        className="absolute bottom-1 left-1 top-1 w-[calc((100%-8px)/4)] rounded-full bg-white shadow-md transition-transform duration-300 ease-in-out"
+                        className="video-layout-thumb absolute bottom-1 left-1 top-1 w-[calc((100%-8px)/4)] rounded-full shadow-md transition-transform duration-300 ease-in-out"
                         style={{ transform: `translateX(${(showVdo - 1) * 100}%)` }}
                     />
                     {templateVideo.map((value) => {
@@ -309,9 +321,8 @@ export default function GateActivate() {
                                 aria-pressed={showVdo === value.id}
                                 title={value.show}
                                 onClick={() => setShowVdo(value.id)}
-                                className={`relative z-10 flex h-9 w-9 items-center justify-center rounded-full transition-colors duration-300 ${
-                                    showVdo === value.id ? "text-cyan-500" : "text-gray-500 hover:text-cyan-400"
-                                }`}
+                                className={`relative z-10 flex h-9 w-9 items-center justify-center rounded-full transition-colors duration-300 ${showVdo === value.id ? "text-cyan-500" : "video-layout-option"
+                                    }`}
                             >
                                 {value.icon}
                             </button>
@@ -335,12 +346,12 @@ export default function GateActivate() {
                     type="button"
                     onClick={captureAll}
                     disabled={isSubmitting}
-                    className="rounded-lg bg-blue-400 px-4 py-2 text-white disabled:cursor-not-allowed disabled:opacity-60"
+                    className="capture-button rounded-lg px-4 py-2 text-white disabled:cursor-not-allowed disabled:opacity-60"
                 >
                     {isSubmitting ? "Capturing and sending..." : "Capture images and send"}
                 </button>
                 {submissionMessage && (
-                    <p role="status" className="mt-2 text-sm">
+                    <p role="status" className="dashboard-subtitle mt-2 text-sm">
                         {submissionMessage}
                     </p>
                 )}
@@ -353,7 +364,7 @@ export default function GateActivate() {
                             alt={`Captured image from Gate ${image.cameraId}`}
                             className="w-full rounded-lg"
                         />
-                        <figcaption className="mt-1 text-sm">
+                        <figcaption className="dashboard-subtitle mt-1 text-sm">
                             Gate {image.cameraId} · {image.capturedAt}
                         </figcaption>
                     </figure>
@@ -362,3 +373,9 @@ export default function GateActivate() {
         </main>
     );
 }
+
+
+
+
+{/* <video data-v-8cd4ec7c="" class="video-player" autoplay="" playsinline="" poster="" 
+src="blob:https://cctv.ppap.com.kh/83276fa8-437f-47e1-8c22-017e98f4ba7c"></video> */}

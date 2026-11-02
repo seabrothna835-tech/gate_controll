@@ -16,7 +16,7 @@ const navigationItems = [
 
 const utilityItems = [
   { key: "setting", label: "Settings", icon: FiBox, disabled: true },
-  { key: "logout", label: "Logout", icon: FiLogOut },
+  { key: "logout", label: "Logout", icon: FiLogOut, disabled: true },
 ];
 
 const Sidebar = () => {
@@ -32,7 +32,7 @@ const Sidebar = () => {
   };
 
   return (
-    <aside aria-label="Main sidebar" className="flex w-64 shrink-0 flex-col justify-between border-r border-slate-200 bg-white p-4 text-slate-800">
+    <aside aria-label="Main sidebar" className="app-sidebar flex w-64 shrink-0 flex-col justify-between border-r p-4">
       <nav className="mt-2 space-y-2">
         {navigationItems.map(({ key, label, icon: Icon, path, disabled }) => {
           const isActive = pathname === path;
@@ -42,18 +42,20 @@ const Sidebar = () => {
               key={key}
               type="button"
               disabled={disabled}
+              aria-label={label}
+              title={label}
               aria-current={isActive ? "page" : undefined}
               onClick={path ? () => navigate(path) : undefined}
               className={`flex w-full items-center space-x-3 rounded-lg px-4 py-2.5 text-left font-hanuman transition ${
                 isActive
-                  ? "bg-sky-100 text-sky-800"
+                  ? "sidebar-item-active"
                   : disabled
-                    ? "cursor-not-allowed text-slate-400"
-                    : "hover:bg-slate-100 hover:text-sky-800"
+                    ? "cursor-not-allowed opacity-50"
+                    : "sidebar-item"
               }`}
             >
               <Icon className={`h-8 w-8 rounded-lg p-2 ${
-                isActive ? "bg-sky-700 text-white" : "bg-slate-100 text-slate-600"
+                isActive ? "sidebar-icon-active" : "sidebar-icon"
               }`} />
               <span>{label}</span>
             </button>
@@ -61,20 +63,22 @@ const Sidebar = () => {
         })}
       </nav>
 
-      <div className="space-y-2 border-t border-slate-200 pt-4">
+      <div className="sidebar-utilities space-y-2 border-t pt-4">
         {utilityItems.map(({ key, label, icon: Icon, disabled }) => (
           <button
             key={key}
             type="button"
             disabled={disabled}
+            aria-label={label}
+            title={label}
             onClick={key === "logout" ? handleLogout : undefined}
             className={`flex w-full items-center space-x-3 rounded-lg px-4 py-2.5 text-left font-hanuman transition ${
               disabled
-                ? "cursor-not-allowed text-slate-400"
-                : "text-slate-700 hover:bg-slate-100 hover:text-sky-800"
+                ? "cursor-not-allowed opacity-50"
+                : "sidebar-item"
             }`}
           >
-            <Icon className="h-8 w-8 rounded-lg bg-slate-100 p-2 text-slate-600" />
+            <Icon className="sidebar-icon h-8 w-8 rounded-lg p-2" />
             <span>{label}</span>
           </button>
         ))}
