@@ -49,7 +49,7 @@ const templateVideo = [
     }
 ];
 
-function CameraPlayer({ camera, registerVideo }) {
+function CameraPlayer({ camera, registerVideo, isActiveLightMode }) {
     const cardRef = useRef(null);
     const videoRef = useRef(null);
 
@@ -116,10 +116,10 @@ function CameraPlayer({ camera, registerVideo }) {
     }, [camera, registerVideo]);
 
     return (
-        <div ref={cardRef} className="camera-card overflow-hidden rounded-2xl border color-animate shadow-md font-hanuman ">
-            <div className="bg-gray-800 p-3 text-white flex items-center justify-between">
+        <div ref={cardRef} className={`overflow-hidden rounded-2xl border shadow-md font-hanuman ${isActiveLightMode ? "border-lightBorder bg-lightModeBg" : "border-darkBorder bg-darkModeBg"}`}>
+            <div className="flex items-center justify-between bg-darkModeBg p-3 text-darkModeTitle">
                 <div className="flex item-center gap-2">
-                    <span className="text-2xl color-animate"><BsRecordBtn /></span>
+                    <span className="text-2xl text-cyan-400"><BsRecordBtn /></span>
                     <h3>កាមេរ៉ា​​ {camera.id}</h3>
                 </div>
                 <div className="text-xs p-1 uppercase border border-green-300 rounded-2xl flex items-center gap-2">
@@ -156,7 +156,9 @@ function CameraPlayer({ camera, registerVideo }) {
 
 export default function GateActivate() {
     const api = import.meta.env.VITE_API_URL || "http://localhost:8080";
-    // const { activeMode } = useOutletContext();
+    const { activeMode } = useOutletContext();
+    const isActiveLightMode = activeMode;
+    const mutedText = isActiveLightMode ? "text-lightModeSubTitle" : "text-darkModeSubTitle";
     const videoRefs = useRef({});
     const [capturedImages, setCapturedImages] = useState([]);
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -296,20 +298,20 @@ export default function GateActivate() {
     }, []);
 
     return (
-        <main className="dashboard-main mx-auto max-w-[1600px] p-4 sm:p-6 lg:p-8 lg:pt-2 font-hanuman">
+        <main className={`mx-auto w-full max-w-[1600px] p-4 font-hanuman sm:p-6 lg:p-8 lg:pt-2 ${isActiveLightMode ? "text-lightModeTitle" : "text-darkModeContent"}`}>
             <div className="mb-5 flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                    <MdVideocam className="text-3xl color-animate shrink-0" />
+                    <MdVideocam className="shrink-0 text-3xl text-cyan-600" />
                     <div>
-                        <p className="dashboard-title text-lg">ពិនិត្យតាមរយៈកាមេរ៉ា</p>
-                        <p className="dashboard-subtitle text-xs">
+                        <p className="text-lg">ពិនិត្យតាមរយៈកាមេរ៉ា</p>
+                        <p className={`text-xs ${mutedText}`}>
                             Live camera feed · use the fullscreen button to expand
                         </p>
                     </div>
                 </div>
-                <div className="video-layout-switch relative grid grid-cols-4 items-center justify-center rounded-full p-1">
+                <div className={`relative grid grid-cols-4 items-center justify-center rounded-full p-1 ${isActiveLightMode ? "bg-lightBorder" : "bg-darkBorder"}`}>
                     <div
-                        className="video-layout-thumb absolute bottom-1 left-1 top-1 w-[calc((100%-8px)/4)] rounded-full shadow-md transition-transform duration-300 ease-in-out"
+                        className={`absolute bottom-1 left-1 top-1 w-[calc((100%-8px)/4)] rounded-full shadow-md transition-transform duration-300 ease-in-out ${isActiveLightMode ? "bg-lightModeBg" : "bg-darkModeBg"}`}
                         style={{ transform: `translateX(${(showVdo - 1) * 100}%)` }}
                     />
                     {templateVideo.map((value) => {
@@ -321,7 +323,7 @@ export default function GateActivate() {
                                 aria-pressed={showVdo === value.id}
                                 title={value.show}
                                 onClick={() => setShowVdo(value.id)}
-                                className={`relative z-10 flex h-9 w-9 items-center justify-center rounded-full transition-colors duration-300 ${showVdo === value.id ? "text-cyan-500" : "video-layout-option"
+                                className={`relative z-10 flex h-9 w-9 items-center justify-center rounded-full transition-colors duration-300 ${showVdo === value.id ? "text-cyan-500" : mutedText
                                     }`}
                             >
                                 {value.icon}
@@ -337,6 +339,7 @@ export default function GateActivate() {
                             key={camera.id}
                             camera={camera}
                             registerVideo={registerVideo}
+                            isActiveLightMode={isActiveLightMode}
                         />
                     ))}
                 </div>
@@ -346,12 +349,12 @@ export default function GateActivate() {
                     type="button"
                     onClick={captureAll}
                     disabled={isSubmitting}
-                    className="capture-button rounded-lg px-4 py-2 text-white disabled:cursor-not-allowed disabled:opacity-60"
+                    className="rounded-lg bg-cyan-700 px-4 py-2 text-white transition-colors hover:bg-cyan-800 disabled:cursor-not-allowed disabled:opacity-60"
                 >
                     {isSubmitting ? "Capturing and sending..." : "Capture images and send"}
                 </button>
                 {submissionMessage && (
-                    <p role="status" className="dashboard-subtitle mt-2 text-sm">
+                    <p role="status" className={`mt-2 text-sm ${mutedText}`}>
                         {submissionMessage}
                     </p>
                 )}
@@ -364,7 +367,7 @@ export default function GateActivate() {
                             alt={`Captured image from Gate ${image.cameraId}`}
                             className="w-full rounded-lg"
                         />
-                        <figcaption className="dashboard-subtitle mt-1 text-sm">
+                        <figcaption className={`mt-1 text-sm ${mutedText}`}>
                             Gate {image.cameraId} · {image.capturedAt}
                         </figcaption>
                     </figure>

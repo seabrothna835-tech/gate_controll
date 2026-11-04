@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 import { FiLogOut } from "react-icons/fi";
-import logo from "../assets/ppap-header-logo.png";
+import logo from "../assets/PPAP.KH-2d6f8898.png";
 import { useState, useEffect } from "react";
 import { IoMdClock } from "react-icons/io";
 import { MdDarkMode } from "react-icons/md";
@@ -80,15 +80,25 @@ function Header({ isActiveLightMode, setIsActiveLightMode }) {
         keycloak.logout({ redirectUri: `${window.location.origin}/` });
     };
 
+    const themeText = isActiveLightMode
+        ? "text-lightModeTitle"
+        : "text-darkModeTitle";
+    const mutedText = isActiveLightMode
+        ? "text-lightModeSubTitle"
+        : "text-darkModeSubTitle";
+    const themeBorder = isActiveLightMode
+        ? "border-lightBorder"
+        : "border-darkBorder";
+
     return (
-        <header className="app-header border-b">
-            <div className="mx-auto flex max-w-[1600px] flex-wrap items-center justify-between gap-4 px-4 py-3 sm:px-6 lg:px-8">
+        <header className={`border-b ${themeBorder} ${themeText}`}>
+            <div className="mx-auto flex max-w-[1600px] flex-wrap items-center justify-between gap-4 px-4 py-2 sm:px-6 lg:px-8">
                 <Link to="/dashboard" className="flex min-w-0 items-center gap-3" aria-label="PPAP camera dashboard">
-                    <img src={logo} alt="PPAP" className="h-11 w-auto max-w-33 object-contain sm:h-12" />
-                    <span className="header-divider hidden h-10 w-px sm:block" />
+                    <img src={logo} alt="PPAP" className="h-11 w-auto max-w-33 object-contain sm:h-12 bg-amber-50 rounded-full p-1" />
+                    <span className={`hidden h-10 w-px sm:block ${isActiveLightMode ? "bg-lightBorder" : "bg-darkBorder"}`} />
                     <span className="min-w-0">
-                        <span className="header-title block truncate text-sm font-moul sm:text-base">ប្រព័ន្ធត្រួតពិនិត្យច្រកចូល</span>
-                        <span className="header-subtitle block truncate text-xs">ត្រួតពិនិត្យនិងអនុញ្ញាតរថយន្ត</span>
+                    <span className="block truncate text-sm font-moul sm:text-base">ប្រព័ន្ធត្រួតពិនិត្យច្រកចូល</span>
+                    <span className={`block truncate text-xs ${mutedText}`}>ត្រួតពិនិត្យនិងអនុញ្ញាតរថយន្ត</span>
                     </span>
                 </Link>
 
@@ -102,17 +112,14 @@ function Header({ isActiveLightMode, setIsActiveLightMode }) {
                         <span className="sm:hidden">ONLINE</span>
                     </div>
 
-                    <div className="flex items-center gap-2 border-l h-full pl-3 text-xs sm:pl-5">
+                    <div className={`flex h-full items-center gap-2 border-l pl-3 text-xs sm:pl-5 ${themeBorder}`}>
                         {/* Group Toggle */}
-                        <div role="group" aria-label="Theme" className="theme-switch relative flex items-center rounded-full p-1">
+                        <div role="group" aria-label="Theme" className={`relative flex items-center rounded-full p-1 ${isActiveLightMode ? "bg-lightBorder" : "bg-darkBorder"}`}>
                             {/* Animated Background */}
                             <div
-                                className={`theme-switch-thumb absolute top-1 bottom-1 w-[calc(50%-4px)] rounded-full
+                                className={`absolute top-1 bottom-1 w-[calc(50%-4px)] rounded-full shadow-sm
                                         transition-all duration-500 ease-in-out
-                                        ${isActiveLightMode
-                                        ? "left-1"
-                                        : "left-[calc(50%+0px)]"
-                                    }`}
+                                        ${isActiveLightMode ? "left-1 bg-lightModeBg" : "left-[calc(50%+0px)] bg-darkModeBg"}`}
                             />
 
                             {/* Day Button */}
@@ -125,7 +132,7 @@ function Header({ isActiveLightMode, setIsActiveLightMode }) {
                                         transition-all duration-300
                                         ${isActiveLightMode
                                         ? "text-amber-500"
-                                        : "text-gray-600 hover:text-amber-500"
+                                        : `${mutedText} hover:text-amber-500`
                                     }`}
                             >
                                 <MdLightMode
@@ -145,11 +152,11 @@ function Header({ isActiveLightMode, setIsActiveLightMode }) {
                                         transition-all duration-300
                                         ${!isActiveLightMode
                                         ? "text-indigo-500"
-                                        : "text-gray-500 hover:text-indigo-500"
+                                        : `${mutedText} hover:text-indigo-500`
                                     }`}
                             >
                                 <MdDarkMode
-                                    className={`text-base transition-transform duration-500 ${!isActiveLightMode                                     ? "text-cyan-500 scale-110" : ""
+                                    className={`text-indigo-500 transition-transform duration-500 ${!isActiveLightMode                                     ? "text-cyan-500 scale-110" : ""
                                         }`}
                                 />
                                 <span>យប់</span>
@@ -157,22 +164,22 @@ function Header({ isActiveLightMode, setIsActiveLightMode }) {
                         </div>
                     </div>
 
-                    <div className="header-clock hidden items-center gap-2 border-l pl-5 text-xs md:flex">
-                        <h2 className="text-3xl"><IoMdClock /></h2>
+                    <div className={`hidden items-center gap-2 border-l pl-5 text-xs md:flex ${themeBorder}`}>
+                        <h2 className={`text-3xl ${mutedText}`}><IoMdClock /></h2>
                         <div>
-                            <p className="header-clock-time text-lg font-bold">{time}</p>
-                            <p className="header-clock-date">{date}</p>
+                            <p className="text-lg font-bold">{time}</p>
+                            <p className={mutedText}>{date}</p>
                         </div>
                     </div>
 
-                    <div className="header-actions flex gap-2 border-l pl-3 sm:pl-5">
+                    <div className={`flex gap-2 border-l pl-3 sm:pl-5 ${themeBorder}`}>
                         <div className="rounded-lg">
                             <button
                                 type="button"
                                 onClick={handleLogout}
                                 aria-label="ចាកចេញ"
                                 title="ចាកចេញ"
-                                className="header-logout flex h-10 w-10 items-center justify-center rounded-lg border transition focus-visible:outline-2 focus-visible:outline-offset-2"
+                                className={`flex h-10 w-10 items-center justify-center rounded-lg border transition focus-visible:outline-2 focus-visible:outline-offset-2 ${themeBorder} ${mutedText} hover:border-cyan-600 hover:text-cyan-600`}
                             >
                                 <FiLogOut size={18} aria-hidden="true" />
                             </button>
@@ -180,7 +187,7 @@ function Header({ isActiveLightMode, setIsActiveLightMode }) {
                     </div>
                 </div>
             </div>
-            <div className="h-1 bg-cyan-700" />
+            <div className="h-0.5 bg-blue-800" />
         </header>
     );
 }

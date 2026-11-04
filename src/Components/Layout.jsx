@@ -5,21 +5,28 @@ import Sidebar from "./Sidebar";
 
 function Layout() {
     const [activeMode, setActiveMode] = useState(
-        () => localStorage.getItem("activeMode") !== "false"
+        () => localStorage.getItem("activeMode") === "true"
     );
 
     useEffect(() => {
-        localStorage.setItem("activeMode", String(activeMode));
+        localStorage.setItem("activeMode", activeMode);
     }, [activeMode]);
 
     return (
-        <div data-mode={activeMode ? "light" : "dark"} className="app-shell flex min-h-screen flex-col">
+        <div
+            data-mode={activeMode ? "light" : "dark"}
+            className={`flex min-h-screen flex-col font-hanuman transition-colors duration-200 ${
+                activeMode
+                    ? "bg-lightModeBg text-lightModeTitle"
+                    : "bg-darkModeBg text-darkModeContent"
+            }`}
+        >
             <Header
                 isActiveLightMode={activeMode}
                 setIsActiveLightMode={setActiveMode}
             />
             <div className="flex flex-1 items-stretch">
-                <Sidebar />
+                {/* <Sidebar isActiveLightMode={activeMode} /> */}
                 <div className="min-w-0 flex-1">
                     <Outlet context={{ activeMode }} />
                 </div>

@@ -95,7 +95,6 @@ export default function Content() {
   return (
     <div className="min-h-screen bg-slate-100 text-slate-900 font-hanuman antialiased flex flex-col">
       <div className="flex flex-1 overflow-hidden">
-        <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} />
         <main className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-6">
           <div className="bg-white rounded-xl shadow-xs border border-slate-200 p-4 sm:p-6 space-y-4">
             <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-b border-slate-100 pb-4">

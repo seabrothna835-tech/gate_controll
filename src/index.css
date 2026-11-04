@@ -1,39 +1,28 @@
-@import "tailwindcss";
 @import url('https://fonts.googleapis.com/css2?family=Hanuman:wght@100;300;400;700;900&display=swap');
 @import url('https://fonts.googleapis.com/css2?family=Moul&display=swap');
-
-body {
-    font-family: 'Hanuman', serif;
-}
-
-.font-moul {
-    font-family: 'Moul', serif;
-}
-
-.color-animate {
-    animation: colorChange 1s infinite alternate;
-}
-
-@keyframes colorChange {
-    0% {
-        color: #31cae8;
-    }
-    100% {
-        color: #00D4FF;
-    }
-}
+@import "tailwindcss";
 
 /* Set color to global variables for the theme */
 @theme {
+    --font-hanuman: "Hanuman", serif;
+    --font-moul: "Moul", serif;
+
     /* light mode  */
     --color-lightModeBg: #F3F6F8;
     --color-lightModeContent: #73818d;
     --color-lightModeTitle: #263746;
     --color-lightModeSubTitle: #73818d;
     --color-lightBorder: #e2e8f0; 
+
+    /* dark mode  */
+    --color-darkModeBg: #0b1220;
+    --color-darkModeContent: #e5edf7;
+    --color-darkModeTitle: #f8fafc;
+    --color-darkModeSubTitle: #9aabc0;
+    --color-darkBorder: #2a3a50;
 }
 
-.app-shell {
+/* .app-shell {
     --app-background: #f3f6fa;
     --app-surface: #ffffff;
     --app-surface-raised: #f8fafc;
@@ -212,4 +201,4 @@ body {
     .app-sidebar > div button span {
         display: none;
     }
-}
+} */
