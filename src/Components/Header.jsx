@@ -1,5 +1,5 @@
-import { Link, useNavigate } from "react-router-dom";
-import { FiCamera, FiLogOut } from "react-icons/fi";
+import { Link } from "react-router-dom";
+import { FiLogOut } from "react-icons/fi";
 import logo from "../assets/ppap-header-logo.png";
 import { useState, useEffect } from "react";
 import { IoMdClock } from "react-icons/io";
@@ -7,10 +7,8 @@ import { MdDarkMode } from "react-icons/md";
 import { MdLightMode } from "react-icons/md";
 import { initKeycloak, keycloak } from "../keyCloak";
 
-function Header({ activeMode, setActiveMode }) {
-    const navigate = useNavigate();
+function Header({ isActiveLightMode, setIsActiveLightMode }) {
     const [currentDateTime, setCurrentDateTime] = useState(new Date());
-   
 
     useEffect(() => {
         const timer = setInterval(() => {
@@ -83,14 +81,14 @@ function Header({ activeMode, setActiveMode }) {
     };
 
     return (
-        <header className="border-b border-slate-100 bg-white">
+        <header className="app-header border-b">
             <div className="mx-auto flex max-w-[1600px] flex-wrap items-center justify-between gap-4 px-4 py-3 sm:px-6 lg:px-8">
                 <Link to="/dashboard" className="flex min-w-0 items-center gap-3" aria-label="PPAP camera dashboard">
                     <img src={logo} alt="PPAP" className="h-11 w-auto max-w-33 object-contain sm:h-12" />
-                    <span className="hidden h-10 w-px bg-blue-50 sm:block" />
+                    <span className="header-divider hidden h-10 w-px sm:block" />
                     <span className="min-w-0">
-                        <span className="block truncate text-sm font-moul text-black sm:text-base">ប្រព័ន្ធត្រួតពិនិត្យច្រកចូល</span>
-                        <span className="block truncate text-xs text-gray-500">ត្រួតពិនិត្យនិងអនុញ្ញាតរថយន្ត</span>
+                        <span className="header-title block truncate text-sm font-moul sm:text-base">ប្រព័ន្ធត្រួតពិនិត្យច្រកចូល</span>
+                        <span className="header-subtitle block truncate text-xs">ត្រួតពិនិត្យនិងអនុញ្ញាតរថយន្ត</span>
                     </span>
                 </Link>
 
@@ -104,15 +102,14 @@ function Header({ activeMode, setActiveMode }) {
                         <span className="sm:hidden">ONLINE</span>
                     </div>
 
-                    <div className="hidden md:flex items-center gap-2 border-l h-full border-[#d8e1e8] pl-5 text-xs text-[#4f5e69]">
+                    <div className="flex items-center gap-2 border-l h-full pl-3 text-xs sm:pl-5">
                         {/* Group Toggle */}
-                        <div className="relative flex items-center rounded-full bg-[#edf2f6] p-1">
+                        <div role="group" aria-label="Theme" className="theme-switch relative flex items-center rounded-full p-1">
                             {/* Animated Background */}
                             <div
-                                className={`absolute top-1 bottom-1 w-[calc(50%-4px)] rounded-full
-                                        bg-white shadow-md
+                                className={`theme-switch-thumb absolute top-1 bottom-1 w-[calc(50%-4px)] rounded-full
                                         transition-all duration-500 ease-in-out
-                                        ${activeMode
+                                        ${isActiveLightMode
                                         ? "left-1"
                                         : "left-[calc(50%+0px)]"
                                     }`}
@@ -121,16 +118,18 @@ function Header({ activeMode, setActiveMode }) {
                             {/* Day Button */}
                             <button
                                 type="button"
-                                onClick={() => setActiveMode(true)}
+                                onClick={() => setIsActiveLightMode(true)}
+                                aria-pressed={isActiveLightMode}
+                                aria-label="Light mode"
                                 className={`relative z-10 flex items-center justify-center gap-1 rounded-full px-4 py-2
                                         transition-all duration-300
-                                        ${activeMode
+                                        ${isActiveLightMode
                                         ? "text-amber-500"
                                         : "text-gray-600 hover:text-amber-500"
                                     }`}
                             >
                                 <MdLightMode
-                                    className={`text-base transition-transform duration-500 ${activeMode ? "rotate-180 scale-110" : ""
+                                    className={`text-base transition-transform duration-500 ${isActiveLightMode ? "rotate-180 scale-110" : ""
                                         }`}
                                 />
                                 <span>ថ្ងៃ</span>
@@ -139,16 +138,18 @@ function Header({ activeMode, setActiveMode }) {
                             {/* Night Button */}
                             <button
                                 type="button"
-                                onClick={() => setActiveMode(false)}
+                                onClick={() => setIsActiveLightMode(false)}
+                                aria-pressed={!isActiveLightMode}
+                                aria-label="Dark mode"
                                 className={`relative z-10 flex items-center justify-center gap-1 rounded-full px-4 py-2
                                         transition-all duration-300
-                                        ${!activeMode
+                                        ${!isActiveLightMode
                                         ? "text-indigo-500"
                                         : "text-gray-500 hover:text-indigo-500"
                                     }`}
                             >
                                 <MdDarkMode
-                                    className={`text-base transition-transform duration-500 ${!activeMode ? "text-cyan-700 scale-110" : ""
+                                    className={`text-base transition-transform duration-500 ${!isActiveLightMode                                     ? "text-cyan-500 scale-110" : ""
                                         }`}
                                 />
                                 <span>យប់</span>
@@ -156,31 +157,22 @@ function Header({ activeMode, setActiveMode }) {
                         </div>
                     </div>
 
-                    <div className="hidden items-center gap-2 border-l border-slate-100 pl-5 text-xs text-gray-500 md:flex">
-                        <h2 className="text-4xl"><IoMdClock /></h2>
+                    <div className="header-clock hidden items-center gap-2 border-l pl-5 text-xs md:flex">
+                        <h2 className="text-3xl"><IoMdClock /></h2>
                         <div>
-                            <p className="text-lg font-bold">{time}</p>
-                            <p className="text-gray-400 ">{date}</p>
+                            <p className="header-clock-time text-lg font-bold">{time}</p>
+                            <p className="header-clock-date">{date}</p>
                         </div>
                     </div>
 
-                    <div className="border-l gap-2 flex pl-5 border-slate-100">
-                        <div className="shadow-[2px_4px_12px_rgba(0,0,0,0.15)] rounded-lg">
-                            {/* <button
-                                type="button"
-                                onClick={() => navigate("/")}
-                                aria-label="ចាកចេញ"
-                                title="ចាកចេញ"
-                                className="flex h-10 w-10 items-center justify-center rounded-lg border border-[#d8e1e8] text-[#52616d] transition hover:border-[#1673a8] hover:bg-[#f2f8fb] hover:text-[#126b9d] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1673a8]"
-                            >
-                                <FiLogOut size={18} aria-hidden="true" />
-                            </button> */}
+                    <div className="header-actions flex gap-2 border-l pl-3 sm:pl-5">
+                        <div className="rounded-lg">
                             <button
                                 type="button"
                                 onClick={handleLogout}
                                 aria-label="ចាកចេញ"
                                 title="ចាកចេញ"
-                                className="flex h-10 w-10 items-center justify-center rounded-lg border border-slate-100 text-gray-500 transition hover:border-[#1673a8] hover:bg-[#f2f8fb] hover:text-cyan-600 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:text-cyan-600"
+                                className="header-logout flex h-10 w-10 items-center justify-center rounded-lg border transition focus-visible:outline-2 focus-visible:outline-offset-2"
                             >
                                 <FiLogOut size={18} aria-hidden="true" />
                             </button>

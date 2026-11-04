@@ -13,8 +13,11 @@ function Layout() {
     }, [activeMode]);
 
     return (
-        <div className="flex min-h-screen flex-col bg-white">
-            <Header activeMode={activeMode} setActiveMode={setActiveMode} />
+        <div data-mode={activeMode ? "light" : "dark"} className="app-shell flex min-h-screen flex-col">
+            <Header
+                isActiveLightMode={activeMode}
+                setIsActiveLightMode={setActiveMode}
+            />
             <div className="flex flex-1 items-stretch">
                 <Sidebar />
                 <div className="min-w-0 flex-1">
