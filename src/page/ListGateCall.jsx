@@ -282,8 +282,9 @@ import ContextMenu from '../Components/ContextMenu';
 import { FaRegEye } from "react-icons/fa";
 import { IoMdLogIn, IoMdLogOut } from "react-icons/io";
 import { BiSolidDetail } from "react-icons/bi";
+import {keycloak} from "../keyCloak";
 
-function GateIn() {
+function ListGateCall() {
     const url_vite = import.meta.env.VITE_API_URL;
     const { activeMode } = useOutletContext();
     const isActiveLightMode = activeMode;
@@ -334,9 +335,9 @@ function GateIn() {
         event.preventDefault();
         setContextMenu({
             visible: true,
-            x: event.clientX,
-            y: event.clientY,
-            row: row,
+            x: event.pageX,
+            y: event.pageY,
+            row,
         });
     };
 
@@ -424,13 +425,85 @@ function GateIn() {
         {
             key: "gate-out",
             label: "អនុញ្ញាតចេញ",
-            icon: <IoMdLogOut />,
+            icon: <IoMdLogOut className="rotate-180" />,
             className: "text-red-400",
             onClick: (row) => {
                 console.log("Gate Out:", row);
             },
         },
     ];
+    
+    useEffect(() => {
+        const fetchData = async () => {
+            try {
+                await keycloak.updateToken(30);
+                const response = await fetch(`${url_vite}/api/gate`, {
+                    Method: "GET",
+                    contentType: "application/json",
+                    headers: {
+                        Authorization: `Bearer ${keycloak.token}`,
+                    },
+                });
+                console.log("Token : ",keycloak.token);
+                if (!response.ok) {
+                    throw new Error(`Failed to fetch gate information (${response.status})`);
+                }
+
+                const data = await response.json();
+                if (!Array.isArray(data?.gateInfoData)) {
+                    throw new Error("Invalid gate response: expected gateInfoData to be an array.");
+                }
+
+                setDataTruck(data.gateInfoData);
+                setLoadError("");
+            } catch (error) {
+                if (error.name !== "AbortError") {
+                    console.error("Error fetching gate call data:", error);
+                    setLoadError(error instanceof Error ? error.message : "Unable to load gate information.");
+                }
+            } finally {
+                setIsLoading(false);
+            }
+        };
+
+        fetchData();
+    }, [url_vite]);
+    
+    useEffect(() => {
+        const fetchData = async () => {
+            try {
+                await keycloak.updateToken(30);
+                const response = await fetch(`${url_vite}/api/gate/cargoId`, {
+                    Method: "GET",
+                    contentType: "application/json",
+                    headers: {
+                        Authorization: `Bearer ${keycloak.token}`,
+                    },
+                });
+                console.log("Token : ",keycloak.token);
+                if (!response.ok) {
+                    throw new Error(`Failed to fetch gate information (${response.status})`);
+                }
+
+                const data = await response.json();
+                if (!Array.isArray(data?.cargos)) {
+                    throw new Error("Invalid gate response: expected cargos to be an array.");
+                }
+
+                setDataTruck(data.cargos);
+                setLoadError("");
+            } catch (error) {
+                if (error.name !== "AbortError") {
+                    console.error("Error fetching gate call data:", error);
+                    setLoadError(error instanceof Error ? error.message : "Unable to load gate information.");
+                }
+            } finally {
+                setIsLoading(false);
+            }
+        };
+
+        fetchData();
+    }, [url_vite]);
 
     return (
         <main className={`min-h-full p-2 font-hanuman sm:p-2 lg:p-4 ${isActiveLightMode ? "text-lightModeTitle" : "text-darkModeContent"}`}>
@@ -500,15 +573,15 @@ function GateIn() {
                         <tbody className={`divide-y ${isActiveLightMode ? "divide-gray-300" : "divide-darkBorder"} border-t ${isActiveLightMode ? "border-lightBorder" : "border-darkBorder"}`}>
                             {isLoading || loadError || dataTruck.length === 0 ? (
                                 <tr>
-                                    <td colSpan={truckColumns.length} className="px-4 py-6 text-center text-sm font-medium">
+                                    <td colSpan={truckColumns.length} className="px-4 py-6 text-center text-sm font-hanuman">
                                         {isLoading
-                                            ? "កំពុងទាញយកទិន្នន័យ..."
-                                            : loadError || "រកមិនឃើញទិន្នន័យទេ។"}
+                                            ? "កំពុងទាញយកព័ត៌មានរថយន្ត..."
+                                            : loadError || "មិនមានព័ត៌មានរថយន្តសម្រាប់បង្ហាញ។"}
                                     </td>
                                 </tr>
                             ) : (
                                 dataTruck.map((truck, index) => (
-                                    <tr key={truck.id ?? truck.gatecallid ?? index} className={` ${isActiveLightMode ? "hover:bg-gray-200" : "hover:bg-darkBorder"}`}
+                                    <tr key={truck.id ?? truck.gatecallid ?? index} className={` ${isActiveLightMode ? "hover:bg-gray-200" : "hover:bg-gray-900"} cursor-pointer`}
                                         onContextMenu={(event) => handleContextMenu(event, truck)}>
                                         {truckColumns.map((col) => (
                                             <td key={col.accessor} className='px-4 py-2 text-sm'>
@@ -534,7 +607,7 @@ function GateIn() {
                             </tr>
                         </thead>
                         <tbody className={`divide-y ${isActiveLightMode ? "divide-gray-300" : "divide-darkBorder"} border-t ${isActiveLightMode ? "border-lightBorder" : "border-darkBorder"}`}>
-                            {isLoading || loadError || dataTruck.length === 0 ? (
+                            {isLoading || loadError || dataCargo.length === 0 ? (
                                 <tr>
                                     <td colSpan={gatecallColumns .length} className="px-4 py-6 text-center text-sm font-medium">
                                         {isLoading
@@ -543,12 +616,12 @@ function GateIn() {
                                     </td>
                                 </tr>
                             ) : (
-                                dataTruck.map((truck, index) => (
-                                    <tr key={truck.id ?? truck.gatecallid ?? index} className={` ${isActiveLightMode ? "hover:bg-gray-200" : "hover:bg-darkBorder"}`}
-                                        onContextMenu={(event) => handleContextMenu(event, truck)}>
+                                dataCargo.map((cargo, index) => (
+                                    <tr key={cargo.id ?? cargo.gatecallid ?? index} className={` ${isActiveLightMode ? "hover:bg-gray-200" : "hover:bg-darkBorder"}`}
+                                        onContextMenu={(event) => handleContextMenu(event, cargo)}>
                                         {gatecallColumns .map((col) => (
                                             <td key={col.accessor} className='px-4 py-2 text-sm'>
-                                                {truck[col.accessor] ?? "—"}
+                                                {cargo[col.accessor] ?? "—"}
                                             </td>
                                         ))}
                                     </tr>
@@ -577,4 +650,4 @@ function GateIn() {
     )
 }
 
-export default GateIn;
+export default ListGateCall
