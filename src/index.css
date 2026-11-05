@@ -21,7 +21,29 @@
     --color-darkModeSubTitle: #9aabc0;
     --color-darkBorder: #2a3a50;
 }
+.context-menu {
+    position: absolute;
+    z-index: 50;
+    isolation: isolate;
+}
 
+.context-menu::before {
+    content: "";
+    position: absolute;
+    top: -9px;
+    left: 12px;
+    z-index: -1;
+
+    width: 16px;
+    height: 16px;
+
+    background: inherit;
+    border-left: inherit;
+    border-top: inherit;
+
+    transform: rotate(45deg);
+    border-radius: 3px 0 0 0;
+}
 /* .app-shell {
     --app-background: #f3f6fa;
     --app-surface: #ffffff;

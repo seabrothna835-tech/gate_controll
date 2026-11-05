@@ -7,7 +7,7 @@ const ContextMenu = ({
     row,
     items = [],
     isDark = false,
-    onClose = () => {},
+    onClose = () => { },
 }) => {
     useEffect(() => {
         if (!visible) return;
@@ -31,20 +31,18 @@ const ContextMenu = ({
 
     return (
         <div
-            className={`absolute ${
-                isDark
+            className={`absolute context-menu  ${isDark
                     ? "bg-blue-950 text-white border border-[#1A1A1A]"
                     : "bg-white border border-gray-300 text-gray-800"
-            } rounded-lg shadow-lg border w-52 z-50`}
-            style={{ left: x, top: y }}
+                } rounded-lg shadow-lg border w-52 z-50 `}
+            style={{ left: x, top: y-[-18] }}
             onClick={(event) => event.stopPropagation()}
         >
             {items.map((item) => (
                 <button
                     key={item.key}
-                    className={`flex gap-2 items-center w-full px-3 py-2 ${isDark ? "hover:bg-blue-800" : "hover:bg-gray-200"} ${
-                        item.className || ""
-                    }`}
+                    className={`flex gap-2 items-center w-full px-3 py-2 ${isDark ? "hover:bg-blue-800" : "hover:bg-gray-200"} rounded-lg ${item.className || ""
+                        }`}
                     onClick={() => {
                         item.onClick?.(row);
                         onClose();
