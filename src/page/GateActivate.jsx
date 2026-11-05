@@ -145,7 +145,7 @@ function CameraPlayer({ camera, registerVideo, isActiveLightMode }) {
                     onClick={openFullscreen}
                     aria-label={`${document.fullscreenElement ? "បិទពេញអេក្រង់" : "បើកពេញអេក្រង់"}`}
                     title={`${document.fullscreenElement ? "បិទពេញអេក្រង់" : "បើកពេញអេក្រង់"}`}
-                    className="absolute bottom-3 right-3 rounded-md bg-black/60 p-2 text-white transition-colors hover:bg-black/80 focus-visible:outline focus-visible:outline-2 focus-visible:outline-white"
+                    className="absolute bottom-3 right-3 rounded-md bg-black/70 p-2 text-white transition-colors hover:bg-black/70 focus-visible:outline focus-visible:outline-2 focus-visible:outline-white"
                 >
                     <MdFullscreen className="text-2xl" />
                 </button>

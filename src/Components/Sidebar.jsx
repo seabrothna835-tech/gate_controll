@@ -4,6 +4,7 @@ import { HiMiniArrowRightEndOnRectangle, HiMiniArrowLeftOnRectangle } from "reac
 import { CiPalette } from "react-icons/ci";
 import { FiBox, FiLogOut } from "react-icons/fi";
 import { initKeycloak, keycloak } from "../keyCloak";
+import { MdOutlineMedicalInformation } from "react-icons/md";
 
 const navigationItems = [
   { key: "dashboard", label: "Dashboard", icon: BiLogoMicrosoft, path: "/dashboard" },
