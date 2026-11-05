@@ -6,8 +6,9 @@ import { FaRegEye } from "react-icons/fa";
 import { IoMdLogIn } from "react-icons/io";
 import { IoMdLogOut } from "react-icons/io";
 import { BiSolidDetail } from "react-icons/bi";
+import {keycloak} from "../keyCloak";
 
-function GateIn() {
+function ListGateCall() {
     const url_vite = import.meta.env.VITE_API_URL;
     const { activeMode } = useOutletContext();
     const isActiveLightMode = activeMode;
@@ -41,9 +42,9 @@ function GateIn() {
 
         setContextMenu({
             visible: true,
-            x: event.clientX,
-            y: event.clientY,
-            row: row,
+            x: event.pageX,
+            y: event.pageY,
+            row,
         });
     };
     const contextMenuItems = [
@@ -68,7 +69,7 @@ function GateIn() {
         {
             key: "gate-out",
             label: "អនុញ្ញាតចេញ",
-            icon: <IoMdLogOut />,
+            icon: <IoMdLogOut className="rotate-180" />,
             className: "text-red-400",
             onClick: (row) => {
                 console.log("Gate Out:", row);
@@ -78,10 +79,15 @@ function GateIn() {
     useEffect(() => {
         const fetchData = async () => {
             try {
+                await keycloak.updateToken(30);
                 const response = await fetch(`${url_vite}/api/gate`, {
                     Method: "GET",
                     contentType: "application/json",
+                    headers: {
+                        Authorization: `Bearer ${keycloak.token}`,
+                    },
                 });
+                console.log("Token : ",keycloak.token);
                 if (!response.ok) {
                     throw new Error(`Failed to fetch gate information (${response.status})`);
                 }
@@ -160,15 +166,15 @@ function GateIn() {
                         <tbody className={`divide-y ${isActiveLightMode ? "divide-gray-300" : "divide-darkBorder"} border-t ${isActiveLightMode ? "border-lightBorder" : "border-darkBorder"}`}>
                             {isLoading || loadError || dataTruck.length === 0 ? (
                                 <tr>
-                                    <td colSpan={truckColumns.length} className="px-4 py-6 text-center text-sm font-medium">
+                                    <td colSpan={truckColumns.length} className="px-4 py-6 text-center text-sm font-hanuman">
                                         {isLoading
-                                            ? "Loading gate information..."
-                                            : loadError || "No gate information found."}
+                                            ? "កំពុងទាញយកព័ត៌មានរថយន្ត..."
+                                            : loadError || "មិនមានព័ត៌មានរថយន្តសម្រាប់បង្ហាញ។"}
                                     </td>
                                 </tr>
                             ) : (
                                 dataTruck.map((truck, index) => (
-                                    <tr key={truck.id ?? truck.gatecallid ?? index} className={` ${isActiveLightMode ? "hover:bg-gray-200" : "hover:bg-darkBorder"}`}
+                                    <tr key={truck.id ?? truck.gatecallid ?? index} className={` ${isActiveLightMode ? "hover:bg-gray-200" : "hover:bg-gray-900"} cursor-pointer`}
                                         onContextMenu={(event) => handleContextMenu(event, truck)}>
                                         {truckColumns.map((col) => (
                                             <td key={col.accessor} className='px-4 py-2 text-sm'>
@@ -200,4 +206,4 @@ function GateIn() {
     )
 }
 
-export default GateIn
+export default ListGateCall
