@@ -7,22 +7,25 @@ import { initKeycloak, keycloak } from "../keyCloak";
 import { MdOutlineMedicalInformation } from "react-icons/md";
 
 const navigationItems = [
-  { key: "dashboard", label: "ផ្ទាំងព័ត៏មានទាំងអស់", icon: BiLogoMicrosoft, path: "/dashboard" },
-  { key: "all information", label: "ព័ត៏មានទូ", icon: MdOutlineMedicalInformation,path: ""},
-  { key: "gate_in", label: "ពិនិត្យច្រកចូល", icon: HiMiniArrowRightEndOnRectangle },
-  { key: "gate_out", label: "ពិនិត្យច្រកចេញ", icon: HiMiniArrowLeftOnRectangle },
-  // { key: "list_gate", label: "", icon: BiLogoCodepen},
-  // { key: "newgate", label: "", icon: CiPalette},
+  { key: "dashboard", label: "Dashboard", icon: BiLogoMicrosoft, path: "/dashboard" },
+  { key: "gate_in", label: "Gate In", icon: HiMiniArrowRightEndOnRectangle, path: "/gate-in"},
+  { key: "gate_out", label: "Gate Out", icon: HiMiniArrowLeftOnRectangle, path: "/gate-out"},
+  { key: "information", label: "Information", icon: BiLineChart },
+  { key: "list_gate", label: "List Gate", icon: BiLogoCodepen},
+  { key: "newgate", label: "New Gate", icon: CiPalette},
 ];
 
 const utilityItems = [
   { key: "setting", label: "Settings", icon: FiBox, disabled: true },
-  { key: "logout", label: "Logout", icon: FiLogOut, disabled: true },
+  { key: "logout", label: "Logout", icon: FiLogOut, disabled: false },
 ];
 
-const Sidebar = () => {
+const Sidebar = ({ isActiveLightMode }) => {
   const navigate = useNavigate();
   const { pathname } = useLocation();
+  const mutedText = isActiveLightMode ? "text-lightModeSubTitle" : "text-darkModeSubTitle";
+  const borderColor = isActiveLightMode ? "border-lightBorder" : "border-darkBorder";
+  const hoverSurface = isActiveLightMode ? "hover:bg-lightBorder" : "hover:bg-darkBorder";
 
   const handleLogout = async () => {
     sessionStorage.removeItem("gate");
@@ -33,7 +36,7 @@ const Sidebar = () => {
   };
 
   return (
-    <aside aria-label="Main sidebar" className="app-sidebar flex w-64 shrink-0 flex-col justify-between border-r p-4">
+    <aside aria-label="Main sidebar" className={`flex w-64 shrink-0 flex-col justify-between border-r p-4 ${borderColor}`}>
       <nav className="mt-2 space-y-2">
         {navigationItems.map(({ key, label, icon: Icon, path, disabled }) => {
           const isActive = pathname === path;
@@ -49,14 +52,18 @@ const Sidebar = () => {
               onClick={path ? () => navigate(path) : undefined}
               className={`flex w-full items-center space-x-3 rounded-lg px-4 py-2.5 text-left font-hanuman transition ${
                 isActive
-                  ? "sidebar-item-active"
+                  ? `${isActiveLightMode ? "bg-lightBorder text-cyan-700" : "bg-darkBorder text-cyan-300"} font-bold shadow-[inset_3px_0_0_0_#0e7490]`
                   : disabled
                     ? "cursor-not-allowed opacity-50"
-                    : "sidebar-item"
+                    : `${mutedText} ${hoverSurface} hover:text-cyan-600`
               }`}
             >
               <Icon className={`h-8 w-8 rounded-lg p-2 ${
-                isActive ? "sidebar-icon-active" : "sidebar-icon"
+                isActive
+                  ? "bg-cyan-800 text-white"
+                  : isActiveLightMode
+                    ? "bg-lightBorder text-lightModeSubTitle"
+                    : "bg-darkBorder text-darkModeSubTitle"
               }`} />
               <span>{label}</span>
             </button>
@@ -64,7 +71,7 @@ const Sidebar = () => {
         })}
       </nav>
 
-      <div className="sidebar-utilities space-y-2 border-t pt-4">
+      <div className={`space-y-2 border-t pt-4 ${borderColor}`}>
         {utilityItems.map(({ key, label, icon: Icon, disabled }) => (
           <button
             key={key}
@@ -76,10 +83,10 @@ const Sidebar = () => {
             className={`flex w-full items-center space-x-3 rounded-lg px-4 py-2.5 text-left font-hanuman transition ${
               disabled
                 ? "cursor-not-allowed opacity-50"
-                : "sidebar-item"
+                : `${mutedText} ${hoverSurface} hover:text-cyan-600`
             }`}
           >
-            <Icon className="sidebar-icon h-8 w-8 rounded-lg p-2" />
+            <Icon className={`h-8 w-8 rounded-lg p-2 ${isActiveLightMode ? "bg-lightBorder text-lightModeSubTitle" : "bg-darkBorder text-darkModeSubTitle"}`} />
             <span>{label}</span>
           </button>
         ))}

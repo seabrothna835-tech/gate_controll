@@ -10,13 +10,13 @@ export default function Mainpage() {
   // Input states
   const [truckInput, setTruckInput] = useState('');
   const [dbddInput, setDbddInput] = useState('');
-  const [includeEXEInput, setIncludeEXEInput] = useState(false);
+
 
   // Active filter states
   const [searchParams, setSearchParams] = useState({
     truck: '',
     dbdd: '',
-    exe: false
+    
   });
 
   const [selectedItem, setSelectedItem] = useState(null);
@@ -48,7 +48,6 @@ export default function Mainpage() {
 
   const filteredData = useMemo(() => {
     if (!Array.isArray(data)) return [];
-
     return data.filter(item => {
       const gatecall = item.gatecall || {};
       const cargo = item.gatecallCargo || {};
@@ -60,9 +59,7 @@ export default function Mainpage() {
         cargo.blnumber?.toLowerCase().includes(searchParams.dbdd.toLowerCase()) ||
         cargo.container_id?.toLowerCase().includes(searchParams.dbdd.toLowerCase());
 
-      const matchEXE = !searchParams.exe || cargo.cargo_status === 'EXE';
-
-      return matchTruck && matchDbdd && matchEXE;
+      return matchTruck && matchDbdd;
     });
   }, [data, searchParams]);
   console.log("Filter",filteredData)
@@ -71,14 +68,12 @@ export default function Mainpage() {
     setSearchParams({
       truck: truckInput,
       dbdd: dbddInput,
-      exe: includeEXEInput
     });
   };
 
   const handleClear = () => {
     setTruckInput('');
     setDbddInput('');
-    setIncludeEXEInput(false);
     setSearchParams({ truck: '', dbdd: '', exe: false });
     if (data.length > 0) setSelectedItem(data[0]);
   };
@@ -91,16 +86,6 @@ export default function Mainpage() {
             <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-b border-blue-900 pb-4">
               <h2 className="text-lg font-semibold text-blue-900">Gate Call</h2>
               <div className="flex flex-wrap items-center gap-3">
-                <label className="flex items-center gap-2 text-sm text-blue-950 cursor-pointer">
-                  <input 
-                    type="checkbox" 
-                    checked={includeEXEInput} 
-                    onChange={(e) => setIncludeEXEInput(e.target.checked)}
-                    className="w-4 h-4 rounded border-blue-900 text-blue-900 focus:ring-indigo-500"
-                  />
-                  IncludeEXE
-                </label>
-
                 <input
                   type="text"
                   placeholder="Truck Number"
@@ -161,7 +146,7 @@ export default function Mainpage() {
                     {filteredData.length > 0 ? (
                       filteredData.map((item, idx) => {
                         const gatecall = item.idx;
-                        // const cargo = item.gateInfoData || {};
+                        
                         return (
                           <tr 
                             key={gatecall.gatecallid || idx} 

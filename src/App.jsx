@@ -3,7 +3,8 @@ import { Routes, Route } from "react-router-dom";
 import Layout from "./Components/Layout";
 import GateActivate from "./page/GateActivate";
 import Login from "./page/Auth/Login";
-import Mainpage from "./content/Mainpage";
+import GateIn from "./page/GateIn";
+
 
 export default function App() {
   return (
@@ -11,7 +12,7 @@ export default function App() {
       <Route path="/" element={<Login />} />
       <Route  element={<Layout />}>
         <Route path="/dashboard" element={<GateActivate />} />
-         <Route path="/main" element={<Mainpage />} />
+        <Route path="/gate-in" element={<GateIn />} />
       </Route>
     </Routes>
   );
