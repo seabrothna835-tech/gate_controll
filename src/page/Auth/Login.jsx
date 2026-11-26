@@ -12,7 +12,7 @@ function Login() {
 
     const goToKeycloak = () => {
         sessionStorage.setItem(REDIRECT_FLAG, String(Date.now()))
-        keycloak.login({ redirectUri: `${window.location.origin}/gate-in` })
+        keycloak.login({ redirectUri: `${window.location.origin}/log` })
 
         // keycloak.login({ redirectUri: `${window.location.origin}/select-landGate` })
     }
@@ -28,7 +28,7 @@ function Login() {
                 // Already signed in: go straight to the dashboard
                 if (authenticated) {
                     sessionStorage.removeItem(REDIRECT_FLAG)
-                    navigate('/main', { replace: true })
+                    navigate('/', { replace: true })
                     return
                 }
 

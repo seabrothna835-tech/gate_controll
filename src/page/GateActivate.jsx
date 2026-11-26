@@ -6,25 +6,9 @@ import { BsRecordBtn } from "react-icons/bs";
 import { MdFullscreen, MdVideocam } from "react-icons/md";
 import { TfiLayoutColumn2Alt, TfiLayoutColumn3Alt, TfiLayoutColumn4Alt } from "react-icons/tfi";
 import { TbColumns1Filled } from "react-icons/tb";
-
-const cameras = [
-    {
-        id: 1,
-        name: "Gate 1",
-        url: "http://localhost:8889/gate1/",
-    },
-
-    {
-        id: 2,
-        name: "Gate 2",
-        url: "http://localhost:8889/gate2/",
-    },
-    {
-        id: 3,
-        name: "Gate 3",
-        url: "http://localhost:8889/gate3/",
-    }
-];
+import { keycloak } from "../keyCloak";
+import { useDispatch, useSelector } from "react-redux";
+import { setGateIn, setGateOut, setGateOutCallId } from "../Store/Filter/Activate";
 
 const templateVideo = [
     {
@@ -49,7 +33,36 @@ const templateVideo = [
     }
 ];
 
-function CameraPlayer({ camera, registerVideo, isActiveLightMode }) {
+function getSavedCameras() {
+    try {
+        const data = localStorage.getItem("stream");
+        if (!data) return { cameras: [], cameraError: "Camera information is not configured." };
+
+        const parsedData = JSON.parse(data);
+        if (!Array.isArray(parsedData)) {
+            throw new Error("Saved camera information must be an array.");
+        }
+        if (parsedData.some((item) => !item || !item.streamUrl)) {
+            throw new Error("Saved camera information is missing a stream URL.");
+        }
+
+        return {
+            cameras: parsedData.map((item, index) => ({
+                id: item.id ?? index,
+                name: item.ip_camera || item.gate_name || `Camera ${index + 1}`,
+                url: item.streamUrl,
+            })),
+            cameraError: "",
+        };
+    } catch (error) {
+        return {
+            cameras: [],
+            cameraError: error instanceof Error ? error.message : "Unable to load camera information.",
+        };
+    }
+}
+
+function CameraPlayer({ camera, registerVideo, onCameraReady, isActiveLightMode }) {
     const cardRef = useRef(null);
     const videoRef = useRef(null);
 
@@ -79,11 +92,21 @@ function CameraPlayer({ camera, registerVideo, isActiveLightMode }) {
         const video = videoRef.current;
         if (!video) return;
         registerVideo(camera.id, video);
-        const streamUrl =
-            camera.url.replace(
-                "http://localhost:8889/",
-                "http://localhost:8888/",
-            ) + "index.m3u8";
+        const updateReadiness = () => {
+            onCameraReady(
+                camera.id,
+                video.readyState >= 2 && video.videoWidth > 0 && video.videoHeight > 0
+            );
+        };
+        video.addEventListener("loadeddata", updateReadiness);
+        video.addEventListener("canplay", updateReadiness);
+        const baseUrl = camera.url.replace(
+            "http://localhost:8889/",
+            "http://localhost:8888/",
+        );
+        const streamUrl = baseUrl.toLowerCase().includes(".m3u8")
+            ? baseUrl
+            : `${baseUrl.replace(/\/$/, "")}/index.m3u8`;
 
         let hls;
 
@@ -109,11 +132,14 @@ function CameraPlayer({ camera, registerVideo, isActiveLightMode }) {
 
         return () => {
             registerVideo(camera.id, null);
+            onCameraReady(camera.id, false);
+            video.removeEventListener("loadeddata", updateReadiness);
+            video.removeEventListener("canplay", updateReadiness);
             hls?.destroy();
             video.removeAttribute("src");
             video.load();
         };
-    }, [camera, registerVideo]);
+    }, [camera, onCameraReady, registerVideo]);
 
     return (
         <div ref={cardRef} className={`overflow-hidden rounded-2xl border shadow-md font-hanuman ${isActiveLightMode ? "border-lightBorder bg-lightModeBg" : "border-darkBorder bg-darkModeBg"}`}>
@@ -154,8 +180,13 @@ function CameraPlayer({ camera, registerVideo, isActiveLightMode }) {
     );
 }
 
-export default function GateActivate() {
-    const api = import.meta.env.VITE_API_URL || "http://localhost:8080";
+export default function GateActivate({ onStatusChange }) {
+    const dispatch = useDispatch();
+    const valueGateIn = useSelector((state) => state.activate.gateIn)
+    const valueGateOut = useSelector((state) => state.activate.gateOut)
+    const callid = useSelector((state) => state.activate.gateOutCallId)
+
+    const url_vite = import.meta.env.VITE_API_URL;
     const { activeMode } = useOutletContext();
     const isActiveLightMode = activeMode;
     const mutedText = isActiveLightMode ? "text-lightModeSubTitle" : "text-darkModeSubTitle";
@@ -163,12 +194,22 @@ export default function GateActivate() {
     const [capturedImages, setCapturedImages] = useState([]);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [submissionMessage, setSubmissionMessage] = useState("");
+    const [readyCameraIds, setReadyCameraIds] = useState([]);
+    const [autoActivationTimedOut, setAutoActivationTimedOut] = useState(false);
+    const [gateDataLoaded, setGateDataLoaded] = useState(false);
+    const [gateDataError, setGateDataError] = useState("");
     const [showVdo, setShowVdo] = useState(3);
     const [gateData, setGateData] = useState({
         gatecall: {},
         gatecallCargo: {}
     });
-    const [submit, setSubmit] = useState(false);
+    const [{ cameras, cameraError }] = useState(getSavedCameras);
+
+    const isGateOut = Boolean(valueGateOut);
+    const shouldAutoActivate = Boolean(valueGateIn || valueGateOut);
+    const autoActivationStarted = useRef(false);
+    const handledCaptureRequest = useRef(0);
+    const [captureRequest, setCaptureRequest] = useState(0);
     const gridColumns = {
         1: "grid-cols-1",
         2: "grid-cols-1 sm:grid-cols-2",
@@ -183,46 +224,97 @@ export default function GateActivate() {
             delete videoRefs.current[cameraId];
         }
     }, []);
-    const captureAll = async () => {
-        setSubmit(true);
-    }
+    const onCameraReady = useCallback((cameraId, isReady) => {
+        setReadyCameraIds((current) => {
+            if (isReady) {
+                return current.includes(cameraId) ? current : [...current, cameraId];
+            }
+            return current.filter((id) => id !== cameraId);
+        });
+    }, []);
+    const allCamerasReady =
+        cameras.length > 0 && cameras.every((camera) => readyCameraIds.includes(camera.id));
+    const isWaitingForActivation =
+        shouldAutoActivate &&
+        (!allCamerasReady || (valueGateIn && !gateDataLoaded)) &&
+        !cameraError &&
+        !gateDataError &&
+        !autoActivationTimedOut &&
+        !isSubmitting;
 
     useEffect(() => {
-        if (!submit) return;
+        if (!onStatusChange) return;
+        const status = isWaitingForActivation
+            ? valueGateIn
+                ? "Waiting for cameras and gate data..."
+                : "Waiting for cameras..."
+            : isSubmitting
+                ? "Capturing and sending..."
+            : submissionMessage || cameraError || gateDataError;
+        onStatusChange(status);
+    }, [
+        gateDataError,
+        cameraError,
+        isSubmitting,
+        isWaitingForActivation,
+        onStatusChange,
+        submissionMessage,
+        valueGateIn,
+    ]);
 
-        const submitGateIn = async () => {
+    useEffect(() => {
+        if (!shouldAutoActivate || autoActivationStarted.current || captureRequest > 0) return;
+        if (!allCamerasReady || (valueGateIn && !gateDataLoaded)) return;
+
+        autoActivationStarted.current = true;
+        setCaptureRequest((current) => current + 1);
+    }, [allCamerasReady, captureRequest, gateDataLoaded, shouldAutoActivate, valueGateIn]);
+
+    useEffect(() => {
+        if (!isWaitingForActivation || autoActivationStarted.current) return;
+        const timeout = window.setTimeout(() => {
+            if (!autoActivationStarted.current) {
+                setAutoActivationTimedOut(true);
+                setSubmissionMessage("Camera feeds or gate data did not become ready in time. Please check the connection and try again.");
+            }
+        }, 30000);
+        return () => window.clearTimeout(timeout);
+    }, [isWaitingForActivation]);
+
+    const captureAll = () => {
+        if (isSubmitting) return;
+        setCaptureRequest((current) => current + 1);
+    };
+
+    useEffect(() => {
+        if (!captureRequest || handledCaptureRequest.current === captureRequest) return;
+        handledCaptureRequest.current = captureRequest;
+        const submitGateAction = async () => {
             setIsSubmitting(true);
             setSubmissionMessage("");
-
             try {
                 const capturedAt = new Date().toLocaleString();
                 const images = cameras.map((camera) => {
                     const video = videoRefs.current[camera.id];
-
                     if (!video || video.readyState < 2) {
                         throw new Error(`${camera.name}: camera is not ready.`);
                     }
                     if (!video.videoWidth || !video.videoHeight) {
                         throw new Error(`${camera.name}: video dimensions are unavailable.`);
                     }
-
                     const canvas = document.createElement("canvas");
                     canvas.width = video.videoWidth;
                     canvas.height = video.videoHeight;
-
                     const context = canvas.getContext("2d");
                     if (!context) {
                         throw new Error("Unable to create a canvas for image capture.");
                     }
-
                     context.drawImage(video, 0, 0, canvas.width, canvas.height);
                     const dataUrl = canvas.toDataURL("image/png");
                     const base64Image = dataUrl.split(",")[1];
-
                     if (!base64Image) {
                         throw new Error(`${camera.name}: failed to encode the captured image.`);
                     }
-
                     return {
                         cameraId: camera.id,
                         dataUrl,
@@ -230,7 +322,6 @@ export default function GateActivate() {
                         capturedAt,
                     };
                 });
-
                 setCapturedImages(
                     images.map(({ cameraId, dataUrl, capturedAt }) => ({
                         id: cameraId,
@@ -239,48 +330,62 @@ export default function GateActivate() {
                         capturedAt,
                     }))
                 );
-
-                const payload = {
-                    gatecall: gateData.gatecall,
-                    gatecallCargo: gateData.gatecallCargo,
-                    gateImage: images.map(({ base64Image }) => ({
-                        in_image: base64Image,
-                    })),
-                };
-
-                const response = await fetch(`${api}/api/gate`, {
+                const payload = isGateOut
+                    ? {
+                        gatecall: {
+                            gatecallid: callid,
+                            gateout_time: new Date().toISOString(),
+                        },
+                        gateImage: images.map(({ base64Image }) => ({
+                            out_image: base64Image,
+                        })),
+                    }
+                    : {
+                        gatecall: gateData.gatecall ?? {},
+                        gatecallCargo: gateData.gatecallCargo ?? {},
+                        gateImage: images.map(({ base64Image }) => ({
+                            in_image: base64Image,
+                        })),
+                    };
+                const endpoint = isGateOut ? "/api/gateout" : "/api/gate";
+                await keycloak.updateToken(30);
+                const token = keycloak.token;
+                const response = await fetch(`${url_vite}${endpoint}`, {
                     method: "POST",
                     headers: {
-                        "Content-Type": "application/json"
+                        "Content-Type": "application/json",
+                        Authorization: `Bearer ${token}`
                     },
                     body: JSON.stringify(payload),
                 });
                 if (!response.ok) {
                     const errorText = await response.text();
                     throw new Error(
-                        `Gate-in request failed (${response.status})${errorText ? `: ${errorText}` : ""}`
+                        `${isGateOut ? "Gate-out" : "Gate-in"} request failed (${response.status})${errorText ? `: ${errorText}` : ""}`
                     );
                 }
 
-                setSubmissionMessage("Gate-in payload sent successfully.");
+                const successMessage = `${isGateOut ? "Gate-out" : "Gate-in"} submitted successfully.`;
+                setSubmissionMessage(successMessage);
+                onStatusChange?.(successMessage);
+                dispatch(setGateIn(false));
+                dispatch(setGateOut(false));
+                dispatch(setGateOutCallId(null));
             } catch (error) {
-                console.error("Capture or gate-in submission failed:", error);
+                console.error("Capture or gate submission failed:", error);
 
                 setSubmissionMessage(
                     error instanceof Error
                         ? error.message
-                        : "Unable to submit gate-in payload."
+                        : `Unable to submit ${isGateOut ? "gate-out" : "gate-in"} payload.`
                 );
-
             } finally {
                 setIsSubmitting(false);
-                setSubmit(false); // Important: reset submit
             }
         };
 
-        submitGateIn();
-
-    }, [submit]);
+        submitGateAction();
+    }, [captureRequest, cameras, isGateOut, gateData, url_vite, callid, dispatch, onStatusChange]);
     useEffect(() => {
         async function fetchGateData() {
             try {
@@ -290,8 +395,13 @@ export default function GateActivate() {
                 }
                 const data = await response.json();
                 setGateData(data);
+                setGateDataLoaded(true);
+                setGateDataError("");
             } catch (error) {
                 console.error("Error fetching gate data:", error);
+                setGateDataError(
+                    error instanceof Error ? error.message : "Unable to load gate data."
+                );
             }
         }
         fetchGateData();
@@ -339,6 +449,7 @@ export default function GateActivate() {
                             key={camera.id}
                             camera={camera}
                             registerVideo={registerVideo}
+                            onCameraReady={onCameraReady}
                             isActiveLightMode={isActiveLightMode}
                         />
                     ))}
@@ -348,11 +459,32 @@ export default function GateActivate() {
                 <button
                     type="button"
                     onClick={captureAll}
-                    disabled={isSubmitting}
+                    disabled={
+                        isSubmitting ||
+                        Boolean(cameraError) ||
+                        isWaitingForActivation ||
+                        (valueGateIn && !gateDataLoaded)
+                    }
                     className="rounded-lg bg-cyan-700 px-4 py-2 text-white transition-colors hover:bg-cyan-800 disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                    {isSubmitting ? "Capturing and sending..." : "Capture images and send"}
+                    {isSubmitting
+                        ? "Capturing and sending..."
+                        : isWaitingForActivation
+                            ? valueGateIn
+                                ? "Waiting for cameras and gate data..."
+                                : "Waiting for cameras..."
+                            : "Capture images and send"}
                 </button>
+                {gateDataError && (
+                    <p role="alert" className={`mt-2 text-sm ${mutedText}`}>
+                        Unable to load gate data: {gateDataError}
+                    </p>
+                )}
+                {cameraError && (
+                    <p role="alert" className={`mt-2 text-sm ${mutedText}`}>
+                        Unable to load cameras: {cameraError}
+                    </p>
+                )}
                 {submissionMessage && (
                     <p role="status" className={`mt-2 text-sm ${mutedText}`}>
                         {submissionMessage}
@@ -376,9 +508,3 @@ export default function GateActivate() {
         </main>
     );
 }
-
-
-
-
-{/* <video data-v-8cd4ec7c="" class="video-player" autoplay="" playsinline="" poster="" 
-src="blob:https://cctv.ppap.com.kh/83276fa8-437f-47e1-8c22-017e98f4ba7c"></video> */}

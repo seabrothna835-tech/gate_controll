@@ -1,3 +1,5 @@
+
+import React, { useEffect, useMemo, useState } from 'react'
 // import React, { useEffect, useState ,useMemo} from 'react'
 // import { PiTruckFill } from "react-icons/pi";
 // import { data, useOutletContext } from "react-router-dom";
@@ -277,15 +279,22 @@
 
 import React, { useEffect, useState } from 'react'
 import { PiTruckFill } from "react-icons/pi";
-import { useOutletContext } from "react-router-dom";
+import { useNavigate, useOutletContext } from "react-router-dom";
 import ContextMenu from '../Components/ContextMenu';
 import { FaRegEye } from "react-icons/fa";
 import { IoMdLogIn, IoMdLogOut } from "react-icons/io";
 import { BiSolidDetail } from "react-icons/bi";
-import {keycloak} from "../keyCloak";
+import { keycloak } from "../keyCloak";
+import { GiCargoCrate } from "react-icons/gi";
+import Pagination from '../Components/Pagination';
+import { useDispatch } from 'react-redux';
+import { setGateIn, setGateOut, setGateOutCallId } from '../Store/Filter/Activate';
+
 
 function ListGateCall() {
+
     const url_vite = import.meta.env.VITE_API_URL;
+    const navigate = useNavigate();
     const { activeMode } = useOutletContext();
     const isActiveLightMode = activeMode;
     const mutedText = isActiveLightMode ? "text-lightModeSubTitle" : "text-darkModeSubTitle";
@@ -301,7 +310,7 @@ function ListGateCall() {
     const [datasearch, setDataSearch] = useState('');
     
     const truckColumns = [
-        { name: "Gate Call ID", accessor: "gatecallid" },
+        // { name: "Gate Call ID", accessor: "gatecallid" },
         { name: "Truck Number", accessor: "licence_plate" },
         { name: "Truck Company", accessor: "truck_company" },
         { name: "Driver Name", accessor: "driver_name" },
@@ -309,7 +318,8 @@ function ListGateCall() {
         { name: "Gate Status", accessor: "gatecall_status" },
         { name: "Pickup / Dropoff", accessor: "dropoff_or_pickup" },
         { name: "Terminal", accessor: "terminal" },
-        { name: "Gate In Time", accessor: "gatein_time" }
+        { name: "Gate In Time", accessor: "gatein_time" },
+        { name: "Gate Out Time", accessor: "gateout_time" }
     ];
 
     const gatecallColumns = [
@@ -409,7 +419,11 @@ function ListGateCall() {
             icon: <FaRegEye />,
             className: "text-green-400",
             onClick: (row) => {
-                console.log("View:", row);
+                const gateCallId = row.gatecallid;
+                console.log("gatecallid : ", gateCallId)
+                navigate(`/gate-call/${encodeURIComponent(gateCallId)}`, {
+                    state: { gateCall: row },
+                });
             },
         },
 
@@ -418,8 +432,8 @@ function ListGateCall() {
             label: "អនុញ្ញាតចូល",
             icon: <IoMdLogIn />,
             className: "text-blue-400",
-            onClick: (row) => {
-                console.log("Allow Entry:", row);
+            onClick: () => {
+                handleGateIn();
             },
         },
         {
@@ -428,43 +442,58 @@ function ListGateCall() {
             icon: <IoMdLogOut className="rotate-180" />,
             className: "text-red-400",
             onClick: (row) => {
-                console.log("Gate Out:", row);
+                if (!row?.gatecallid) {
+                    console.error("Cannot start gate-out: selected row has no gate-call ID.");
+                    return;
+                }
+                handleGateOut(row.gatecallid)
             },
         },
     ];
     
     useEffect(() => {
         const fetchData = async () => {
+            setIsCargoLoading(true);
+            setCargoError("");
             try {
                 await keycloak.updateToken(30);
-                const response = await fetch(`${url_vite}/api/gate`, {
-                    Method: "GET",
-                    contentType: "application/json",
-                    headers: {
-                        Authorization: `Bearer ${keycloak.token}`,
-                    },
-                });
-                console.log("Token : ",keycloak.token);
+                const response = await fetch(
+                    `${url_vite}/api/gate/callId/${gateCallId}`,
+                    {
+                        method: "GET",
+                        headers: {
+                            Authorization: `Bearer ${keycloak.token}`,
+                        },
+                    }
+                );
                 if (!response.ok) {
-                    throw new Error(`Failed to fetch gate information (${response.status})`);
+                    throw new Error(
+                        `Failed to fetch gate information (${response.status})`
+                    );
                 }
-
                 const data = await response.json();
-                if (!Array.isArray(data?.gateInfoData)) {
-                    throw new Error("Invalid gate response: expected gateInfoData to be an array.");
+                // Get only cargos
+                const cargos = data?.gateInfoData?.[0]?.cargos ?? [];
+                if (!Array.isArray(cargos)) {
+                    throw new Error("Invalid gate response: expected cargos to be an array.");
                 }
-
-                setDataTruck(data.gateInfoData);
-                setLoadError("");
+                setDataCargo(cargos);
+                console.log("Data cargo:", cargos);
             } catch (error) {
-                if (error.name !== "AbortError") {
-                    console.error("Error fetching gate call data:", error);
-                    setLoadError(error instanceof Error ? error.message : "Unable to load gate information.");
-                }
+                console.error("Error fetching gate call data:", error);
+                setCargoError(
+                    error instanceof Error
+                        ? error.message
+                        : "Unable to load cargo information."
+                );
             } finally {
-                setIsLoading(false);
+                setIsCargoLoading(false);
             }
         };
+        if (gateCallId) {
+            fetchData();
+        }
+    }, [url_vite, gateCallId]);
 
         fetchData();
     }, [url_vite]);
@@ -518,7 +547,7 @@ function ListGateCall() {
                 <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
                     <input
                         type="text"
-                        placeholder="បញ្ចូលលេខរថយន្ត"
+                        placeholder="ស្វែងរកលេខរថយន្ត..."
                         className={fieldStyle}
                         value={truckSearch}
                         onChange={(e) => setTruckSearch(e.target.value)}
@@ -559,8 +588,8 @@ function ListGateCall() {
                     <PiTruckFill className="rounded-xl bg-blue-800 p-2 text-4xl text-white" />
                     <h2 className="text-lg font-bold">ព័ត៌មានរថយន្តចូលចេញ</h2>
                 </div>
-                <div className={`border py-2 rounded-2xl ${isActiveLightMode ? "border-gray-300 bg-gray-100" : "border-darkBorder bg-darkModeBg"}`}>
-                    <table className={`w-full border-collapse ${isActiveLightMode ? "border-lightBorder" : "border-darkBorder"}`}>
+                <div className={`overflow-x-auto w-full rounded-2xl border shadow-sm ${surface}`}>
+                    <table className={`min-w-full w-full ${isActiveLightMode ? "border-lightBorder" : "border-darkBorder"}`}>
                         <thead>
                             <tr>
                                 {truckColumns.map((col) => (
@@ -571,20 +600,31 @@ function ListGateCall() {
                             </tr>
                         </thead>
                         <tbody className={`divide-y ${isActiveLightMode ? "divide-gray-300" : "divide-darkBorder"} border-t ${isActiveLightMode ? "border-lightBorder" : "border-darkBorder"}`}>
-                            {isLoading || loadError || dataTruck.length === 0 ? (
+                            {isLoading || loadError ? (
                                 <tr>
                                     <td colSpan={truckColumns.length} className="px-4 py-6 text-center text-sm font-hanuman">
                                         {isLoading
                                             ? "កំពុងទាញយកព័ត៌មានរថយន្ត..."
-                                            : loadError || "មិនមានព័ត៌មានរថយន្តសម្រាប់បង្ហាញ។"}
+                                            : loadError}
                                     </td>
                                 </tr>
-                            ) : (
-                                dataTruck.map((truck, index) => (
-                                    <tr key={truck.id ?? truck.gatecallid ?? index} className={` ${isActiveLightMode ? "hover:bg-gray-200" : "hover:bg-gray-900"} cursor-pointer`}
+                            ) :
+                                PageData.length == 0?
+                                (
+                                    <tr>
+                                    <td colSpan={truckColumns.length} className="px-4 py-6 text-center text-sm font-hanuman">
+                                        មិនមានព័ត៌មានរថយន្តសម្រាប់បង្ហាញ។
+                                    </td>
+                                </tr>
+                                )
+                            : (
+                                PageData.map((truck, index) => (
+                                    <tr key={truck.id ?? truck.gatecallid ?? index} className={` ${isActiveLightMode ? "hover:bg-gray-50" : "hover:bg-gray-900"} cursor-pointer`}
                                         onContextMenu={(event) => handleContextMenu(event, truck)}>
                                         {truckColumns.map((col) => (
-                                            <td key={col.accessor} className='px-4 py-2 text-sm'>
+                                            <td key={col.accessor} className='px-4 py-2 text-sm' onClick={() => {
+                                                setGateCallId(truck.gatecallid);
+                                            }}>
                                                 {truck[col.accessor] ?? "—"}
                                             </td>
                                         ))}
