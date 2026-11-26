@@ -1,142 +1,297 @@
 import { useEffect, useRef, useState } from "react";
 import Hls from "hls.js";
 
-function CaptureImage() {
-    const videoRef = useRef(null);
-    const canvasRef = useRef(null);
-    const [status, setStatus] = useState("Connecting to CCTV...");
-    const [imageDataUrl, setImageDataUrl] = useState(null);
+function getSavedCameras() {
+    try {
+        const data = localStorage.getItem("stream");
+        if (!data) return { cameras: [], loadError: "" };
 
-    useEffect(() => {
-        const video = videoRef.current;
-        const url = "/live/cctv2/index.m3u8";
-        // const url2 = "/live/cctv1/index.m3u8";
-        // const url3 = "/live/cctv3/index.m3u8";
-        // const url = process.env.CAMERA1_URL || "/live/cctv2/index.m3u8";
-        if (!video) return;
-
-        let hls;
-
-        if (Hls.isSupported()) {
-            hls = new Hls();
-
-            hls.loadSource(url);
-            hls.attachMedia(video);
-
-            hls.on(Hls.Events.MANIFEST_PARSED, () => {
-                setStatus("CCTV connected");
-                video.play().catch(console.error);
-            });
-
-            hls.on(Hls.Events.ERROR, (_, data) => {
-                console.error("HLS error:", data);
-
-                if (data.type === Hls.ErrorTypes.NETWORK_ERROR) {
-                    setStatus("Network error: Check CCTV access and CORS.");
-                } else if (data.type === Hls.ErrorTypes.MEDIA_ERROR) {
-                    setStatus("Media error: Unable to play CCTV.");
-                } else if (data.fatal) {
-                    setStatus("Unable to access CCTV stream.");
-                }
-            });
-        } else if (video.canPlayType("CaptureImagelication/vnd.CaptureImagele.mpegurl")) {
-            video.src = url;
-            setStatus("Trying native HLS playback");
-
-            video.addEventListener("error", () => {
-                setStatus("Unable to play CCTV stream.");
-            });
-        } else {
-            setStatus("Your browser does not support HLS.");
+        const parsedData = JSON.parse(data);
+        if (!Array.isArray(parsedData)) {
+            throw new Error("Saved camera information must be an array.");
         }
 
-        return () => {
-            hls?.destroy();
+        if (parsedData.some((item) => !item || !item.streamUrl)) {
+            throw new Error("Saved camera information is missing a stream URL.");
+        }
+
+        return {
+            cameras: parsedData.map((item, index) => ({
+                id: item.id ?? index,
+                name: item.ip_camera || `Camera ${index + 1}`,
+                url: item.streamUrl
+            })),
+            loadError: ""
         };
-    }, []);
-    const captureImage = () => {
-        const video = videoRef.current;
-        if (!video) return;
+    } catch (error) {
+        return {
+            cameras: [],
+            loadError: error.message || "Unable to load camera information."
+        };
+    }
+}
+
+function CaptureImage() {
+
+    const [status, setStatus] = useState({});
+    const [capturedImages, setCapturedImages] = useState([]);
+    const [{ cameras, loadError }] = useState(getSavedCameras);
+
+    const videoRefs = useRef({});
+
+    useEffect(() => {
+        const cleanups = [];
+        cameras.forEach((camera) => {
+
+            const video = videoRefs.current[camera.id];
+
+            if (!video) return;
+
+            if (Hls.isSupported()) {
+
+                const hls = new Hls({
+                    enableWorker: true,
+                    lowLatencyMode: true
+                });
+
+                cleanups.push(() => hls.destroy());
+
+                hls.loadSource(camera.url);
+                hls.attachMedia(video);
+
+                hls.on(Hls.Events.MANIFEST_PARSED, () => {
+
+                    setStatus(prev => ({
+                        ...prev,
+                        [camera.id]: "Connected"
+                    }));
+
+                    video.play().catch(console.error);
+                });
+
+                hls.on(Hls.Events.ERROR, (_, data) => {
+
+                    console.error(`Camera ${camera.id} error:`, data);
+
+                    if (data.fatal) {
+                        setStatus(prev => ({
+                            ...prev,
+                            [camera.id]: "Connection failed"
+                        }));
+
+                        hls.destroy();
+                    }
+                });
+
+                setStatus(prev => ({
+                    ...prev,
+                    [camera.id]: "Connecting..."
+                }));
+
+            } else if (video.canPlayType("application/vnd.apple.mpegurl")) {
+
+                video.src = camera.url;
+                const handleLoadedMetadata = () => {
+                    setStatus(prev => ({
+                        ...prev,
+                        [camera.id]: "Connected"
+                    }));
+                };
+                const handleError = () => {
+                    setStatus(prev => ({
+                        ...prev,
+                        [camera.id]: "Connection failed"
+                    }));
+                };
+
+                setStatus(prev => ({
+                    ...prev,
+                    [camera.id]: "Connecting..."
+                }));
+
+                video.addEventListener("loadedmetadata", handleLoadedMetadata);
+                video.addEventListener("error", handleError);
+
+                video.play().catch(console.error);
+
+                cleanups.push(() => {
+                    video.removeEventListener("loadedmetadata", handleLoadedMetadata);
+                    video.removeEventListener("error", handleError);
+                    video.removeAttribute("src");
+                    video.load();
+                });
+
+            } else {
+
+                setStatus(prev => ({
+                    ...prev,
+                    [camera.id]: "Browser does not support HLS"
+                }));
+            }
+
+        });
+        return () => {
+            cleanups.forEach(cleanup => cleanup());
+        };
+    }, [cameras]);
+
+    const captureImage = (camera) => {
+
+        const video = videoRefs.current[camera.id];
+
+        if (!video || video.readyState < 2 || !video.videoWidth || !video.videoHeight) {
+            alert("Camera is not ready!");
+            return;
+        }
 
         const canvas = document.createElement("canvas");
+
         canvas.width = video.videoWidth;
         canvas.height = video.videoHeight;
 
         const ctx = canvas.getContext("2d");
-        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        if (!ctx) {
+            alert("Unable to capture an image from this camera.");
+            return;
+        }
 
-        const imageDataUrl = canvas.toDataURL("image/png");
-        setImageDataUrl(imageDataUrl);
-        console.log("Image : ", imageDataUrl)
+        let imageDataUrl;
+        try {
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+            imageDataUrl = canvas.toDataURL("image/png");
+        } catch (error) {
+            console.error("Unable to capture camera image:", error);
+            alert("Unable to capture an image from this camera.");
+            return;
+        }
+
+        const capturedImage = {
+            id: Date.now(),
+            cameraId: camera.id,
+            cameraName: camera.name,
+            image: imageDataUrl,
+            capturedAt: new Date().toLocaleString()
+        };
+
+        setCapturedImages(prev => [
+            capturedImage,
+            ...prev
+        ]);
+
+        console.log("Captured image:", capturedImage);
     };
 
     return (
-        <div style={{ padding: 20 }}>
-            <h2>PPAP Live CCTV</h2>
+        <div className="p-5">
 
-            <p>{status}</p>
+            <h2 className="text-2xl font-bold mb-4">
+                PPAP Live CCTV Monitoring
+            </h2>
 
-            <video
-                ref={videoRef}
-                controls
-                autoPlay
-                muted
-                playsInline
-                style={{ width: "100%", maxWidth: 900 }}
-            />
-
-            <div className="mt-4 justify-center flex">
-                <button onClick={captureImage} className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
-                    Capture image
-                </button>
-                {/* <canvas ref={canvasRef} className="">{imageDataUrl && <img src={imageDataUrl} alt="Captured" />}</canvas> */}
-            </div>
-            {imageDataUrl && (
-                <div className="mt-4">
-                    <h3>Captured Image:</h3>
-                    <img src={imageDataUrl} alt="Captured" className="border" />
-                </div>
+            {loadError && (
+                <p role="alert" className="mb-4 text-red-600">
+                    {loadError}
+                </p>
             )}
+
+            {/* Camera Grid */}
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+
+                {!cameras.length && !loadError && (
+                    <p className="text-gray-500">
+                        No cameras connected. Return to the camera configuration form and connect cameras.
+                    </p>
+                )}
+
+                {cameras.map(camera => (
+
+                    <div
+                        key={camera.id}
+                        className="border rounded-lg p-3 shadow"
+                    >
+
+                        <div className="flex justify-between items-center mb-2">
+
+                            <h3 className="font-semibold">
+                                {camera.name}
+                            </h3>
+
+                            <span className="text-sm text-green-600">
+                                {status[camera.id] || "Connecting..."}
+                            </span>
+
+                        </div>
+
+                        <video
+                            ref={el => {
+                                videoRefs.current[camera.id] = el;
+                            }}
+                            autoPlay
+                            muted
+                            playsInline
+                            controls
+                            className="w-full aspect-video bg-black rounded"
+                        />
+
+                        <button
+                            onClick={() => captureImage(camera)}
+                            className="mt-3 bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
+                        >
+                            Capture Image
+                        </button>
+
+                    </div>
+
+                ))}
+
+            </div>
+
+            {/* Captured Images */}
+
+            {capturedImages.length > 0 && (
+
+                <div className="mt-8">
+
+                    <h2 className="text-xl font-bold mb-4">
+                        Captured Images
+                    </h2>
+
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+
+                        {capturedImages.map(image => (
+
+                            <div
+                                key={image.id}
+                                className="border rounded-lg p-3"
+                            >
+
+                                <img
+                                    src={image.image}
+                                    alt={image.cameraName}
+                                    className="w-full rounded"
+                                />
+
+                                <p className="font-semibold mt-2">
+                                    {image.cameraName}
+                                </p>
+
+                                <p className="text-sm text-gray-500">
+                                    {image.capturedAt}
+                                </p>
+
+                            </div>
+
+                        ))}
+
+                    </div>
+
+                </div>
+
+            )}
+
         </div>
     );
 }
-
-// const videoRef = useRef(null);
-    // const [capturedImages, setCapturedImages] = useState([]);
-
-    // useEffect(() => {
-    //     const handleCapture = (event) => {
-    //         if (event.data?.type !== "captured-frame") return;
-
-    //         const camera = cameras.find((item) => {
-    //             const iframe = document.querySelector(`iframe[data-camera-id="${item.id}"]`);
-    //             return iframe?.contentWindow === event.source;
-    //         });
-
-    //         if (!camera || typeof event.data.image !== "string") return;
-
-    //         setCapturedImages((previous) => [...previous, { cameraId: camera.id, imageUrl: event.data.image }]);
-    //     };
-
-    //     window.addEventListener("message", handleCapture);
-    //     return () => window.removeEventListener("message", handleCapture);
-    // }, []);
-
-    // const captureImage = () => {
-    //     const video = videoRef.current;
-
-    //     if (!video || video.videoWidth === 0 || video.videoHeight === 0) {
-    //         alert("Video is not ready!");
-    //         return;
-    //     }
-    //     const canvas = document.createElement("canvas");
-    //     canvas.width = video.videoWidth;
-    //     canvas.height = video.videoHeight;
-    //     const ctx = canvas.getContext("2d");
-    //     ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-    //     const imageDataUrl = canvas.toDataURL("image/png");
-    //     // Store multiple images
-    //     setCapturedImages((prevImages) => [...prevImages, imageDataUrl]);
-    // };
 
 export default CaptureImage;

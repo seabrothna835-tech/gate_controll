@@ -1,10 +1,10 @@
 {
     "gateData": {
         "gatecall": {
-                "gatecallid": 7118,
-                "licence_plate": "PP-3A-5653",
-                "truck_company": "Mekong Logistics Co., Ltd.",
-                "descriptions": "Truck entered through Gate 2 for container pickup",
+                "gatecallid":9998,
+                "licence_plate": "1A-3343",
+                "truck_company": "Mekong Co., Ltd.",
+                "descriptions": "Truck ",
                 "gatecall_status": "ACT",
                 "driver_name": "Sok Vannak",
                 "driver_id": "DRV-004",
@@ -12,10 +12,11 @@
                 "terminal": "LM17",
                 "gatein_time": "2026-10-28T10:46:56"
             },
-            "gatecallCargo": {
-                "cargo_id": 523,
+        "gatecallCargo": 
+            {
+                "cargo_id": 473,
                 "bl_id": 305,
-                "container_id": "TGHU7653315",
+                "container_id": "TGHU333515",
                 "handling_time": "2026-10-23T09:45:00",
                 "blnumber": "BL-2026-004",
                 "container_lenght": "20FT",
